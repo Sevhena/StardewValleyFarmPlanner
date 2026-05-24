@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stardew Farm Planner</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+  <div class="app">
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         FARM SETUP BAR
+         Contains: season/day/year/gold/farm-type/level inputs,
+         equipment toggle tags, and animal count inputs.
+         All values here feed into the planner calculations.
+    ════════════════════════════════════════════════════════════════ -->
+    <div class="setup-bar">
+      <h2>Farm setup</h2>
+
+      <!-- Top row: core farm parameters -->
+      <div class="setup-top">
+        <div class="fg">
+          <label>Season</label>
+          <select id="s-season">
+            <option>Spring</option>
+            <option>Summer</option>
+            <option>Fall</option>
+            <option>Winter</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Day (1–28)</label>
+          <input type="number" id="s-day" min="1" max="28" value="1">
+        </div>
+        <div class="fg">
+          <label>Year</label>
+          <input type="number" id="s-year" min="1" max="10" value="1">
+        </div>
+        <div class="fg">
+          <label>Gold</label>
+          <input type="number" id="s-gold" min="0" value="500">
+        </div>
+        <div class="fg">
+          <label>Farm type</label>
+          <select id="s-farm">
+            <option>Standard</option>
+            <option>Riverland</option>
+            <option>Forest</option>
+            <option>Hill-top</option>
+            <option>Wilderness</option>
+            <option>Four Corners</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Farming level</label>
+          <input type="number" id="s-level" min="0" max="10" value="0">
+        </div>
+      </div>
+
+      <!-- Equipment toggles: click to mark as owned, unlocks relevant artisan chains -->
+      <div class="slbl">Processing equipment &amp; production buildings</div>
+      <div class="equip-wrap" id="equip-grid">
+        <span class="etag" data-e="Keg">Keg</span>
+        <span class="etag" data-e="Preserves Jar">Preserves Jar</span>
+        <span class="etag" data-e="Oil Maker">Oil Maker</span>
+        <span class="etag" data-e="Mayonnaise Machine">Mayo Machine</span>
+        <span class="etag" data-e="Cheese Press">Cheese Press</span>
+        <span class="etag" data-e="Loom">Loom</span>
+        <span class="etag" data-e="Seed Maker">Seed Maker</span>
+        <span class="etag" data-e="Mill">Mill</span>
+        <span class="etag" data-e="Cask">Cask</span>
+        <span class="etag" data-e="Bee House">Bee House</span>
+        <span class="etag" data-e="Dehydrator">Dehydrator</span>
+        <span class="etag" data-e="Fish Smoker">Fish Smoker</span>
+        <span class="etag" data-e="Recycling Machine">Recycling Machine</span>
+        <span class="etag" data-e="Crab Pot">Crab Pot</span>
+        <span class="etag" data-e="Mushroom Log">Mushroom Log</span>
+        <span class="etag" data-e="Furnace">Furnace</span>
+        <span class="etag" data-e="Crystalarium">Crystalarium</span>
+        <span class="etag" data-e="Bone Mill">Bone Mill</span>
+        <span class="etag" data-e="Greenhouse">Greenhouse</span>
+        <span class="etag" data-e="Slime Hutch">Slime Hutch</span>
+      </div>
+
+      <!-- Animal counts: drive hay requirements and artisan chain availability -->
+      <div class="slbl">Animals</div>
+      <div class="animals-grid">
+        <div class="fg"><label>Chickens</label><input type="number" id="a-chicken" min="0" value="4"></div>
+        <div class="fg"><label>Ducks</label><input type="number" id="a-duck" min="0" value="4"></div>
+        <div class="fg"><label>Rabbits</label><input type="number" id="a-rabbit" min="0" value="4"></div>
+        <div class="fg"><label>Cows</label><input type="number" id="a-cow" min="0" value="4"></div>
+        <div class="fg"><label>Goats</label><input type="number" id="a-goat" min="0" value="4"></div>
+        <div class="fg"><label>Sheep</label><input type="number" id="a-sheep" min="0" value="4"></div>
+        <div class="fg"><label>Pigs</label><input type="number" id="a-pig" min="0" value="6"></div>
+        <div class="fg"><label>Ostriches</label><input type="number" id="a-ostrich" min="0" value="0"></div>
+        <div class="fg"><label>Dinosaurs</label><input type="number" id="a-dino" min="0" value="0"></div>
+      </div>
+
+      <button class="save-btn" onclick="saveAndRefresh()">Save &amp; refresh all ↗</button>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         TAB NAVIGATION
+         Four tabs: Seasonal Farm, Greenhouse, Artisan & Animals, Seed Maker.
+         Each tab has a corresponding .panel div below.
+    ════════════════════════════════════════════════════════════════ -->
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('seasonal')">Seasonal farm</button>
+      <button class="tab" onclick="showTab('greenhouse')">Greenhouse</button>
+      <button class="tab" onclick="showTab('artisan')">Artisan &amp; animals</button>
+      <button class="tab" onclick="showTab('seedmaker')">Seed Maker</button>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         STATUS BANNER
+         Quick-glance season / day / days-remaining / gold summary.
+         The progress bar fills as the season advances (day 1–28).
+    ════════════════════════════════════════════════════════════════ -->
+    <div class="banner">
+      <div class="bcard">
+        <div class="bcard-lbl">Season</div>
+        <div class="bcard-val s-spring" id="m-season">—</div>
+      </div>
+      <div class="bcard">
+        <div class="bcard-lbl">Day</div>
+        <div class="bcard-val" id="m-day">—</div>
+      </div>
+      <div class="bcard">
+        <div class="bcard-lbl">Days left</div>
+        <div class="bcard-val" id="m-dl">—</div>
+      </div>
+      <div class="bcard">
+        <div class="bcard-lbl">Gold</div>
+        <div class="bcard-val" id="m-gold">—</div>
+      </div>
+    </div>
+    <!-- Season progress bar (days elapsed / 28) -->
+    <div class="prog-bar">
+      <div class="prog-fill" id="s-prog" style="width:0%"></div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         TAB PANEL: SEASONAL FARM
+         Contains:
+           - Farm plots editor (add/remove/configure plots)
+           - Season-start shopping list (auto-generated seed purchases)
+           - Planting schedule (day-by-day plant/replant/switch events)
+           - All viable crops table (ranked by gold/day)
+           - Seasonal forage reference
+    ════════════════════════════════════════════════════════════════ -->
+    <div id="tab-seasonal" class="panel active">
+
+      <!-- Plot editor: each row = one plot definition (name, W, H, count, type, sprinkler, boost) -->
+      <div class="card">
+        <div class="card-title">Farm plots</div>
+        <div style="font-size:12px;color:var(--txt3);margin-bottom:9px;line-height:1.5">
+          Income plots: single crop each.
+          Giant/supply plots can mix crops. Row 2 per plot sets sprinkler type (auto-calculates usable tiles) and growth fertilizer.
+        </div>
+        <!-- Column headers for the plot editor rows -->
+        <div class="plot-r1">
+          <span style="font-size:10px;color:var(--txt3);font-weight:700;text-transform:uppercase">Name</span>
+          <span style="font-size:10px;color:var(--txt3);font-weight:700;text-transform:uppercase;text-align:center">W</span>
+          <span style="font-size:10px;color:var(--txt3);font-weight:700;text-transform:uppercase;text-align:center">H</span>
+          <span style="font-size:10px;color:var(--txt3);font-weight:700;text-transform:uppercase;text-align:center">Qty</span>
+          <span style="font-size:10px;color:var(--txt3);font-weight:700;text-transform:uppercase;text-align:center">Type</span>
+          <span style="font-size:10px;color:var(--txt3);font-weight:700;text-transform:uppercase;text-align:center">Sprinklers</span>
+          <span style="font-size:10px;color:var(--txt3);font-weight:700;text-transform:uppercase;text-align:center">Speed Boost</span>
+          <span></span>
+        </div>
+        <!-- Plot rows injected here by renderPlots() in renderSetup.js -->
+        <div id="plot-rows"></div>
+        <button
+          style="font-size:12px;padding:4px 12px;margin-top:6px;border-radius:5px;border:.5px solid var(--bd);background:var(--bg);color:var(--txt);cursor:pointer"
+          onclick="addPlot()">+ Add plot</button>
+        <!-- Plot summary totals (income tiles, giant blocks, supply tiles, hay needed) -->
+        <div class="plot-sum" id="plot-sum"></div>
+      </div>
+
+      <!-- Shopping list + schedule in a two-column layout -->
+      <div class="buy-sched">
+        <!-- Shopping list: seeds to buy at season start, grouped by plot type -->
+        <div class="card" style="margin-bottom:0">
+          <div class="card-title">Season-start shopping list</div>
+          <!-- Injected by renderBuyList() in renderSeasonal.js -->
+          <div id="buy-list">
+            <div style="color:var(--txt3)">Save setup to generate.</div>
+          </div>
+        </div>
+        <!-- Planting schedule: day-labelled events (plant / replant / switch / festival) -->
+        <div class="card" style="margin-bottom:0">
+          <div class="card-title">Planting schedule</div>
+          <!-- Injected by renderSchedule() in renderSeasonal.js -->
+          <div id="schedule">
+            <div style="color:var(--txt3)">Save setup to generate.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Full ranked crop table for the current season -->
+      <div class="card">
+        <div class="card-title">
+          All viable crops — ranked by gold/day
+          <span style="font-size:10px;font-weight:400;color:var(--txt3)">
+            (artisan-boosted if equipment active · dimmed = missing equipment)
+          </span>
+        </div>
+        <table class="ptable">
+          <thead>
+            <tr>
+              <th style="width:16%">Crop</th>
+              <th style="width:11%">Seasons</th>
+              <th style="width:9%">Plant by</th>
+              <th style="width:9%">Grow</th>
+              <th style="width:7%">Harvests</th>
+              <th style="width:8%">g/day</th>
+              <th style="width:40%">Notes</th>
+            </tr>
+          </thead>
+          <!-- Injected by renderCropTable() in renderSeasonal.js -->
+          <tbody id="plan-body"></tbody>
+        </table>
+      </div>
+
+      <!-- Seasonal forage: what to collect this season and best sell/process routes -->
+      <div class="card">
+        <div class="card-title">
+          Seasonal forage —
+          <span id="forage-season-lbl" style="font-weight:400;text-transform:none;font-size:11px;color:var(--txt2)">
+            what to look out for this season
+          </span>
+        </div>
+        <!-- Injected by renderForage() in renderSeasonal.js -->
+        <div id="forage-content">
+          <div style="color:var(--txt3)">Save to load forage.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         TAB PANEL: GREENHOUSE
+         Static reference panel for permanent greenhouse crops.
+         No seasons — plant once, harvest forever.
+         Sections:
+           - Greenhouse crops ranked by value/tile
+           - Fruit trees (border planting guide)
+    ════════════════════════════════════════════════════════════════ -->
+    <div id="tab-greenhouse" class="panel">
+      <div class="card">
+        <div class="card-title">Greenhouse crops — set and forget</div>
+        <div style="font-size:13px;color:var(--txt2);line-height:1.7;margin-bottom:12px">
+          No seasons. Highest passive income per tile. Once established, just harvest.
+        </div>
+        <!-- Injected by renderGreenhouse() in renderOther.js -->
+        <div class="two-grid" id="gh-content"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Fruit trees — permanent border</div>
+        <div style="font-size:13px;color:var(--txt2);line-height:1.7;margin-bottom:10px">
+          Plant around the perimeter — produce every day once mature, year-round.
+        </div>
+        <!-- Injected by renderGreenhouse() in renderOther.js -->
+        <div class="two-grid" id="tree-content"></div>
+      </div>
+      <div class="tip-box">
+        <strong>Startup tip:</strong> Ancient Fruit seeds come from artifact spots, Seed Maker, or Travelling Cart.
+        Prioritize over Starfruit — regrows forever, zero replanting.
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         TAB PANEL: ARTISAN & ANIMALS
+         Shows active processing chains based on owned equipment + animals.
+         Sections:
+           - Active chains (only what you can actually use)
+           - Seasonal forage → artisan pairings
+           - All chains reference table
+    ════════════════════════════════════════════════════════════════ -->
+    <div id="tab-artisan" class="panel">
+      <div class="card" style="margin-bottom:10px">
+        <div class="card-title">Active processing chains — your equipment &amp; animals</div>
+        <!-- Injected by renderArtisan() in renderOther.js -->
+        <div id="art-active">
+          <div style="color:var(--txt3)">Save setup to see active chains.</div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:10px">
+        <div class="card-title">Seasonal forage — artisan pairings</div>
+        <!-- Injected by renderArtisan() in renderOther.js -->
+        <div id="forage-artisan">
+          <div style="color:var(--txt3)">Save setup to see forage pairings.</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">All artisan chains — reference</div>
+        <!-- Injected by renderArtisan() in renderOther.js -->
+        <div class="two-grid" id="art-content"></div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         TAB PANEL: SEED MAKER
+         Priority recommendations for what to run through the Seed Maker.
+         Ranks crops by seed cost savings and upcoming season relevance.
+    ════════════════════════════════════════════════════════════════ -->
+    <div id="tab-seedmaker" class="panel">
+      <div class="card">
+        <div class="card-title">Seed Maker — priority recommendations</div>
+        <!-- Intro text updated by renderSeedMaker() in renderOther.js -->
+        <div style="font-size:13px;color:var(--txt2);line-height:1.7;margin-bottom:10px" id="sm-intro">
+          Enable Seed Maker in equipment to see recommendations.
+        </div>
+        <!-- Injected by renderSeedMaker() in renderOther.js -->
+        <div id="sm-content"></div>
+      </div>
+    </div>
+
+  </div><!-- /.app -->
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       SCRIPT LOAD ORDER
+       Modules must load in dependency order:
+         data.js       → raw game data constants (no dependencies)
+         gameCalc.js   → pure math helpers (depends on data.js)
+         state.js      → app state + persistence (depends on data.js)
+         plotLogic.js  → income/giant/supply assignment (depends on gameCalc, state)
+         renderSetup.js → setup bar + plot editor UI (depends on state, plotLogic)
+         renderSeasonal.js → seasonal tab rendering (depends on all above)
+         renderOther.js   → greenhouse/artisan/seedmaker tabs
+         main.js          → entry point, wires everything together
+  ════════════════════════════════════════════════════════════════ -->
+  <script src="js/data.js"></script>
+  <script src="js/gameCalc.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/plotLogic.js"></script>
+  <script src="js/renderSetup.js"></script>
+  <script src="js/renderSeasonal.js"></script>
+  <script src="js/renderOther.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

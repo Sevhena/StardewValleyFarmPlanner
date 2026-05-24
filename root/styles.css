@@ -1,0 +1,715 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   STARDEW FARM PLANNER — STYLES
+   ───────────────────────────────────────────────────────────────────────
+   Table of contents:
+     1.  Reset & base
+     2.  CSS custom properties (design tokens)
+     3.  App shell & layout
+     4.  Setup bar (farm parameters section at the top)
+     5.  Equipment tags (clickable toggles)
+     6.  Tab navigation
+     7.  Status banner & progress bar
+     8.  Panel / card containers
+     9.  Plot editor rows
+    10.  Plot summary tiles
+    11.  Shopping list & schedule layout
+    12.  Data table (ranked crops)
+    13.  Badge chips
+    14.  Section group headers
+    15.  Buy list items
+    16.  Schedule day/event rows
+    17.  Forage grid
+    18.  Greenhouse & artisan cards
+    19.  Seed Maker cards
+    20.  Utility components (toggle buttons, rank bar, festival box, tip box)
+════════════════════════════════════════════════════════════════════════ */
+
+
+/* ─── 1. RESET & BASE ────────────────────────────────────────────────── */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: system-ui, sans-serif;
+  background: transparent;
+  color: #1a1a1a;
+  font-size: 13px;
+}
+
+
+/* ─── 2. CSS CUSTOM PROPERTIES ───────────────────────────────────────── */
+:root {
+  /* Backgrounds */
+  --bg:  #fff;
+  --bg2: #f5f5f5;
+
+  /* Borders */
+  --bd:  #e0e0e0;
+  --bd2: #ccc;
+
+  /* Text hierarchy */
+  --txt:  #1a1a1a;  /* primary */
+  --txt2: #555;     /* secondary */
+  --txt3: #999;     /* tertiary / labels */
+
+  /* Border radius */
+  --r: 8px;
+
+  /* Semantic accent colours */
+  --green: #27500A;
+  --amber: #633806;
+  --red:   #A32D2D;
+}
+
+
+/* ─── 3. APP SHELL & LAYOUT ──────────────────────────────────────────── */
+.app {
+  padding: .5rem 0;
+}
+
+
+/* ─── 4. SETUP BAR ───────────────────────────────────────────────────── */
+.setup-bar {
+  background: var(--bg);
+  border: .5px solid var(--bd);
+  border-radius: var(--r);
+  padding: .85rem 1rem;
+  margin-bottom: 12px;
+}
+
+.setup-bar h2 {
+  font-size: 11px;
+  color: var(--txt3);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  margin-bottom: 10px;
+}
+
+/* 6-column grid for core farm parameters */
+.setup-top {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+/* Sub-section label (e.g. "Equipment", "Animals") */
+.slbl {
+  font-size: 11px;
+  color: var(--txt3);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  margin-bottom: 6px;
+  margin-top: 10px;
+}
+
+/* Form group: label + input/select stacked vertically */
+.fg {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.fg label {
+  font-size: 11px;
+  color: var(--txt2);
+}
+
+.fg input,
+.fg select {
+  font-size: 13px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: .5px solid var(--bd2);
+  background: var(--bg);
+  color: var(--txt);
+  width: 100%;
+}
+
+/* 5-column grid for animal count inputs */
+.animals-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 7px;
+}
+
+/* Primary action button (Save & refresh) */
+.save-btn {
+  font-size: 13px;
+  padding: 6px 18px;
+  margin-top: 10px;
+  border-radius: 6px;
+  background: #27500A;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.save-btn:hover {
+  background: #3B6D11;
+}
+
+
+/* ─── 5. EQUIPMENT TAGS ──────────────────────────────────────────────── */
+.equip-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+/* Individual equipment pill — click toggles "owned" state */
+.etag {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--bg2);
+  color: var(--txt2);
+  border: .5px solid var(--bd);
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Active/owned state */
+.etag.on {
+  background: #EAF3DE;
+  color: #27500A;
+  border-color: #C0DD97;
+}
+
+
+/* ─── 6. TAB NAVIGATION ──────────────────────────────────────────────── */
+.tabs {
+  display: flex;
+  border-bottom: .5px solid var(--bd);
+  margin-bottom: 12px;
+}
+
+.tab {
+  font-size: 13px;
+  padding: 7px 15px;
+  cursor: pointer;
+  color: var(--txt2);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: none;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+}
+
+.tab.active {
+  color: var(--txt);
+  font-weight: 600;
+  border-bottom-color: var(--txt);
+}
+
+
+/* ─── 7. STATUS BANNER & PROGRESS BAR ───────────────────────────────── */
+/* 4-column summary row at the top of the content area */
+.banner {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 7px;
+  margin-bottom: 10px;
+}
+
+.bcard {
+  background: var(--bg2);
+  border-radius: 6px;
+  padding: 8px 11px;
+}
+
+.bcard-lbl {
+  font-size: 11px;
+  color: var(--txt3);
+  margin-bottom: 2px;
+}
+
+.bcard-val {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--txt);
+}
+
+/* Season colour variants for the season banner card */
+.s-spring { color: #3B6D11; }
+.s-summer { color: #185FA5; }
+.s-fall   { color: #BA7517; }
+.s-winter { color: #534AB7; }
+
+/* Season progress bar (sits below the banner) */
+.prog-bar {
+  height: 4px;
+  background: var(--bg2);
+  border-radius: 99px;
+  margin-bottom: 14px;
+}
+
+.prog-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: #639922;
+}
+
+
+/* ─── 8. PANEL / CARD CONTAINERS ────────────────────────────────────── */
+/* Tab panels — only .active is displayed */
+.panel {
+  display: none;
+}
+
+.panel.active {
+  display: block;
+}
+
+/* Generic content card with border */
+.card {
+  background: var(--bg);
+  border: .5px solid var(--bd);
+  border-radius: var(--r);
+  padding: .9rem 1rem;
+  margin-bottom: 10px;
+}
+
+/* Card section heading (uppercase label) */
+.card-title {
+  font-size: 11px;
+  color: var(--txt3);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  margin-bottom: 9px;
+}
+
+
+/* ─── 9. PLOT EDITOR ROWS ────────────────────────────────────────────── */
+/* Individual plot entry wrapper */
+.plot-item {
+  border-bottom: .5px solid var(--bd);
+  padding: 6px 0;
+}
+
+.plot-item:last-child {
+  border-bottom: none;
+}
+
+/* 8-column row: name | W | H | qty | type | sprinkler | boost | delete */
+.plot-r1 {
+  display: grid;
+  grid-template-columns: minmax(0, 0.5fr) 50px 50px 50px 200px 150px 150px 26px;
+  gap: 5px;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+/* Two-column row for sprinkler + boost selects */
+.plot-r2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+}
+
+/* Standard plot input */
+.pi {
+  font-size: 12px;
+  padding: 4px 6px;
+  border: .5px solid var(--bd2);
+  border-radius: 5px;
+  background: var(--bg);
+  color: var(--txt);
+  width: 100%;
+}
+
+/* Small/compact plot select */
+.pis {
+  font-size: 11px;
+  padding: 4px 5px;
+  border: .5px solid var(--bd2);
+  border-radius: 5px;
+  background: var(--bg);
+  color: var(--txt);
+  width: 100%;
+}
+
+/* Delete row button */
+.plot-del {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--txt3);
+  font-size: 14px;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.plot-del:hover {
+  color: var(--red);
+}
+
+
+/* ─── 10. PLOT SUMMARY TILES ─────────────────────────────────────────── */
+/* 4-column grid of summary tiles below the plot editor */
+.plot-sum {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.psc {
+  background: var(--bg2);
+  border-radius: 6px;
+  padding: 7px 9px;
+}
+
+.psc-lbl {
+  font-size: 10px;
+  color: var(--txt3);
+  margin-bottom: 2px;
+}
+
+.psc-val {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--txt);
+}
+
+
+/* ─── 11. SHOPPING LIST & SCHEDULE LAYOUT ───────────────────────────── */
+/* Side-by-side layout for shopping list and planting schedule */
+.buy-sched {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+
+/* ─── 12. DATA TABLE (RANKED CROPS) ─────────────────────────────────── */
+.ptable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  table-layout: fixed;
+}
+
+.ptable th {
+  text-align: left;
+  font-size: 10px;
+  color: var(--txt3);
+  font-weight: 700;
+  padding: 0 4px 5px;
+  border-bottom: .5px solid var(--bd);
+  text-transform: uppercase;
+  letter-spacing: .03em;
+}
+
+.ptable td {
+  padding: 5px 4px;
+  border-bottom: .5px solid var(--bd);
+  vertical-align: middle;
+}
+
+.ptable tr:last-child td {
+  border-bottom: none;
+}
+
+
+/* ─── 13. BADGE CHIPS ────────────────────────────────────────────────── */
+/* Inline coloured label chips — bg-{colour} variants */
+.badge {
+  display: inline-block;
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.bg-green  { background: #EAF3DE; color: #27500A; }
+.bg-blue   { background: #E6F1FB; color: #0C447C; }
+.bg-amber  { background: #FAEEDA; color: #633806; }
+.bg-pink   { background: #FBEAF0; color: #72243E; }
+.bg-gray   { background: #F1EFE8; color: #444;    }
+.bg-purple { background: #EEEDFE; color: #3C3489; }
+.bg-teal   { background: #E1F5EE; color: #085041; }
+.bg-coral  { background: #FAECE7; color: #712B13; }
+
+
+/* ─── 14. SECTION GROUP HEADERS ─────────────────────────────────────── */
+/* Bold section divider inside the shopping list (e.g. "Income plots", "Giant plots") */
+.bgh {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--txt3);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  padding: 7px 0 4px;
+  border-bottom: .5px solid var(--bd);
+  margin-bottom: 3px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+
+/* ─── 15. BUY LIST ITEMS ─────────────────────────────────────────────── */
+/* Single seed-purchase row in the shopping list */
+.bi {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 6px 0;
+  border-bottom: .5px solid var(--bd);
+  gap: 8px;
+}
+
+.bi:last-child {
+  border-bottom: none;
+}
+
+/* Total cost row at the bottom of the shopping list */
+.buy-total {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0 0;
+  border-top: .5px solid var(--bd);
+  margin-top: 4px;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+
+/* ─── 16. SCHEDULE DAY / EVENT ROWS ─────────────────────────────────── */
+/* Wrapper for a single day's events */
+.sday {
+  margin-bottom: 9px;
+}
+
+/* Day label pill (e.g. "Day 4", "Day 13 ← today") */
+.sday-lbl {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--txt3);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  padding: 2px 6px;
+  background: var(--bg2);
+  border-radius: 4px;
+  display: inline-block;
+  margin-bottom: 4px;
+}
+
+/* Single schedule event row (icon + text) */
+.sevt {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  font-size: 12px;
+  padding: 2px 0;
+  line-height: 1.4;
+}
+
+.sevt-icon {
+  flex-shrink: 0;
+  font-size: 13px;
+}
+
+/* Highlighted block for crop-switch events */
+.evt-switch {
+  background: #FFF8EC;
+  border-left: 3px solid #e8a817;
+  padding: 3px 6px;
+  border-radius: 3px;
+  margin-top: 2px;
+}
+
+
+/* ─── 17. FORAGE GRID ────────────────────────────────────────────────── */
+/* 3-column grid of forage item cards */
+.forage-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.fcrd {
+  background: var(--bg2);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.fcrd-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--txt);
+  margin-bottom: 2px;
+}
+
+.fcrd-sell {
+  font-size: 11px;
+  color: var(--green);
+  font-weight: 600;
+}
+
+.fcrd-note {
+  font-size: 11px;
+  color: var(--txt2);
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+
+/* ─── 18. GREENHOUSE & ARTISAN CARDS ─────────────────────────────────── */
+/* Two-column grid for greenhouse crops, artisan chains */
+.two-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+  margin-bottom: 10px;
+}
+
+/* Card variant used in greenhouse + artisan panels */
+.gh-card {
+  background: var(--bg);
+  border: .5px solid var(--bd);
+  border-radius: var(--r);
+  padding: .85rem;
+}
+
+.gh-card h3 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--txt);
+  margin-bottom: 6px;
+}
+
+/* Key-value row inside a gh-card */
+.gh-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  padding: 3px 0;
+  border-bottom: .5px solid var(--bd);
+}
+
+.gh-row:last-child {
+  border-bottom: none;
+}
+
+.gh-lbl { color: var(--txt2); }
+.gh-val { font-weight: 600; color: var(--txt); }
+
+
+/* ─── 19. SEED MAKER CARDS ───────────────────────────────────────────── */
+/* Card wrapper for a priority tier */
+.sm-card {
+  background: var(--bg);
+  border: .5px solid var(--bd);
+  border-radius: var(--r);
+  padding: .85rem;
+  margin-bottom: 8px;
+}
+
+/* Single seed-maker recommendation row */
+.sm-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 5px 0;
+  border-bottom: .5px solid var(--bd);
+  gap: 8px;
+  font-size: 12px;
+}
+
+.sm-row:last-child {
+  border-bottom: none;
+}
+
+/* Priority pill labels for seed maker tiers */
+.ppill {
+  font-size: 10px;
+  padding: 1px 7px;
+  border-radius: 99px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.pp-urgent { background: #FAEEDA; color: #633806; }
+.pp-high   { background: #EAF3DE; color: #27500A; }
+.pp-medium { background: #E6F1FB; color: #0C447C; }
+.pp-low    { background: #F1EFE8; color: #444;    }
+
+
+/* ─── 20. UTILITY COMPONENTS ─────────────────────────────────────────── */
+
+/* Small toggle button used in buy-list section headers */
+.toggle-btn {
+  font-size: 10px;
+  padding: 2px 9px;
+  border-radius: 5px;
+  border: .5px solid var(--bd2);
+  background: var(--bg);
+  color: var(--txt2);
+  cursor: pointer;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background .12s, color .12s;
+}
+
+.toggle-btn:hover {
+  background: #EAF3DE;
+  color: #27500A;
+  border-color: #C0DD97;
+}
+
+/* Alternate/active state for toggle buttons (e.g. "variety mode" active) */
+.toggle-btn.alt {
+  background: #FAEEDA;
+  color: #633806;
+  border-color: #e8c97a;
+}
+
+/* Thin progress bar showing relative crop value in the crop table */
+.rank-bar {
+  display: flex;
+  height: 3px;
+  border-radius: 99px;
+  background: var(--bg2);
+  margin-top: 3px;
+  overflow: hidden;
+}
+
+.rank-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: #639922;
+}
+
+/* Warning box for upcoming festivals in the shopping list */
+.festival-box {
+  background: #FFF3E0;
+  border: .5px solid #FFB74D;
+  border-radius: 6px;
+  padding: 7px 10px;
+  font-size: 12px;
+  color: #633806;
+  margin-bottom: 8px;
+}
+
+/* Advisory/tip box used at the bottom of cards */
+.tip-box {
+  background: var(--bg2);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--txt2);
+  line-height: 1.6;
+  margin-top: 8px;
+}
