@@ -8,7 +8,7 @@
  *   - updateStatusBanner() — refresh the season/day/gold banner strip
  *   - addPlot() / removePlot() — plot CRUD
  *
- * Depends on: data.js, gameCalc.js, state.js
+ * Depends on: data.js, gameCalc.js, state.js, templates.js
  */
 
 
@@ -21,11 +21,11 @@
  */
 function syncFormFromState() {
   document.getElementById("s-season").value = STATE.season;
-  document.getElementById("s-day").value    = STATE.day;
-  document.getElementById("s-year").value   = STATE.year;
-  document.getElementById("s-gold").value   = STATE.gold;
-  document.getElementById("s-farm").value   = STATE.farmType;
-  document.getElementById("s-level").value  = STATE.level;
+  document.getElementById("s-day").value = STATE.day;
+  document.getElementById("s-year").value = STATE.year;
+  document.getElementById("s-gold").value = STATE.gold;
+  document.getElementById("s-farm").value = STATE.farmType;
+  document.getElementById("s-level").value = STATE.level;
 
   // Animal counts
   ["chicken", "duck", "rabbit", "cow", "goat", "sheep", "pig", "ostrich", "dino"]
@@ -66,16 +66,16 @@ function updateStatusBanner() {
   const seasonColourClasses = {
     Spring: "s-spring",
     Summer: "s-summer",
-    Fall:   "s-fall",
+    Fall: "s-fall",
     Winter: "s-winter",
   };
 
   const seasonEl = document.getElementById("m-season");
   seasonEl.textContent = STATE.season;
-  seasonEl.className   = "bcard-val " + (seasonColourClasses[STATE.season] || "");
+  seasonEl.className = "bcard-val " + (seasonColourClasses[STATE.season] || "");
 
-  document.getElementById("m-day").textContent  = STATE.day;
-  document.getElementById("m-dl").textContent   = getDaysLeft() - 1;
+  document.getElementById("m-day").textContent = STATE.day;
+  document.getElementById("m-dl").textContent = getDaysLeft() - 1;
   document.getElementById("m-gold").textContent = Number(STATE.gold).toLocaleString() + "g";
 
   const progressPercent = Math.round((STATE.day - 1) / 28 * 100);
@@ -97,7 +97,7 @@ function renderPlots() {
 
   const plotTypeOptions = {
     income: "Income (single crop)",
-    giant:  "Giant crops",
+    giant: "Giant crops",
     supply: "Supply / mill",
   };
 
@@ -113,7 +113,7 @@ function renderPlots() {
 
     const sprinklerOptionsHtml = Object.entries(SPRINKLER_CONFIGS)
       .map(([value, cfg]) =>
-        `<option value="${value}"${(plot.sprinkler || "inner") === value ? " selected" : ""}>${cfg.label}</option>`
+        `<option value="${value}"${(plot.sprinkler || "none") === value ? " selected" : ""}>${cfg.label}</option>`
       ).join("");
 
     const fertilizerOptionsHtml = Object.entries(FERTILIZER_CONFIGS)
@@ -122,8 +122,8 @@ function renderPlots() {
       ).join("");
 
     const usableTileCount = calcUsableTiles(plot);
-    const grossTileCount  = plot.w * plot.h * plot.count;
-    const fertilizerNote  = (plot.boost && plot.boost !== "none")
+    const grossTileCount = plot.w * plot.h * plot.count;
+    const fertilizerNote = (plot.boost && plot.boost !== "none")
       ? ` · ${FERTILIZER_CONFIGS[plot.boost].label}` : "";
 
     plotItem.innerHTML = `
@@ -154,7 +154,7 @@ function renderPlots() {
 
         <button class="plot-del" onclick="removePlot(${plotIndex})" aria-label="Remove plot">✕</button>
       </div>
-      <div style="font-size:10px;color:var(--txt3);margin-top:3px">
+      <div class="plot-tile-info">
         ${usableTileCount} usable / ${grossTileCount} gross tiles${fertilizerNote}
       </div>`;
 
@@ -171,11 +171,11 @@ function renderPlots() {
 function refreshPlotSummary() {
   updateStatusBanner();
 
-  const incomeTiles    = getTotalIncomeTiles();
-  const supplyTiles    = getTotalSupplyTiles();
-  const giantBlocks    = getTotalGiantBlocks();
-  const giantTiles     = getTotalGiantTiles();
-  const winterHay      = calcWinterHayNeeded(STATE.animals);
+  const incomeTiles = getTotalIncomeTiles();
+  const supplyTiles = getTotalSupplyTiles();
+  const giantBlocks = getTotalGiantBlocks();
+  const giantTiles = getTotalGiantTiles();
+  const winterHay = calcWinterHayNeeded(STATE.animals);
 
   document.getElementById("plot-sum").innerHTML = `
     <div class="psc">
@@ -184,7 +184,7 @@ function refreshPlotSummary() {
     </div>
     <div class="psc">
       <div class="psc-lbl">Giant 3×3 blocks</div>
-      <div class="psc-val">${giantBlocks} <span style="font-size:12px;font-weight:400">(${giantTiles}t)</span></div>
+      <div class="psc-val">${giantBlocks} <span class="giant-tile-count">(${giantTiles}t)</span></div>
     </div>
     <div class="psc">
       <div class="psc-lbl">Supply tiles</div>
@@ -205,7 +205,7 @@ function addPlot() {
     name: "New plot",
     w: 5, h: 5, count: 1,
     type: "income",
-    sprinkler: "inner",
+    sprinkler: "none",
     boost: "none",
   });
   renderPlots();
@@ -218,5 +218,5 @@ function addPlot() {
 function removePlot(plotIndex) {
   STATE.plots.splice(plotIndex, 1);
   renderPlots();
-  renderAll();
+  renderAllSeasonal();
 }

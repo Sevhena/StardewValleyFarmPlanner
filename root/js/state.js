@@ -5,7 +5,7 @@
  *
  * Sections:
  *   STATE — the live state object (mutated in place throughout the app)
- *   Persistence — load() and save() via window.storage
+ *   Persistence — load() and save() via localStorage
  *   Accessors — convenience helpers that read from STATE
  */
 
@@ -76,22 +76,22 @@ let STATE = {
   incomeAssignments: {},      // { cropName: { defIdx: count } }
 };
 
-/** Storage key used for window.storage persistence */
+/** Storage key used for localStorage persistence */
 const STORAGE_KEY = "sdv_v9";
 
 
 // ─── PERSISTENCE ──────────────────────────────────────────────────────────────
 
 /**
- * Load persisted state from window.storage and merge it into STATE.
+ * Load persisted state from localStorage and merge it into STATE.
  * Missing or new fields fall back to the defaults defined above.
  * After loading, triggers a full UI redraw.
  */
 async function loadState() {
   try {
-    const result = await window.storage.get(STORAGE_KEY);
+    const result = await localStorage.getItem(STORAGE_KEY);
     if (result) {
-      const persisted = JSON.parse(result.value);
+      const persisted = JSON.parse(result);
       // Merge persisted fields over defaults (new fields in defaults survive)
       Object.assign(STATE, persisted);
       // Ensure every plot has required fields that may not exist in older saves
@@ -114,19 +114,19 @@ async function loadState() {
   // Full redraw after load
   syncFormFromState();
   renderPlots();
-  renderAll();
+  renderAllSeasonal();
   renderGreenhouse();
   renderArtisan();
   renderSeedMaker();
 }
 
 /**
- * Persist the current STATE to window.storage.
+ * Persist the current STATE to localStorage.
  * Called automatically by saveAndRefresh() and toggle handlers.
  */
 async function saveState() {
   try {
-    await window.storage.set(STORAGE_KEY, JSON.stringify(STATE));
+    await localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE));
   } catch (err) {
     console.warn("Could not save state:", err);
   }

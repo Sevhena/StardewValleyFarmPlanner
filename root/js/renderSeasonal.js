@@ -1,14 +1,17 @@
 /**
  * renderSeasonal.js — Seasonal Farm tab rendering
  * ─────────────────────────────────────────────────
- * Renders everything inside the "Seasonal farm" tab panel:
+ * Renders everything inside the "Seasonal farm" tab panel.
+ * All HTML fragment construction is delegated to templates.js.
+ *
+ * Functions:
  *   renderCropTable()  — ranked crop table (all viable crops for the season)
  *   renderBuyList()    — season-start shopping list (seeds + costs by plot type)
  *   renderSchedule()   — day-by-day planting/replant/switch/festival schedule
  *   renderForage()     — seasonal forage items grid
  *   renderAll()        — convenience wrapper that calls all four above
  *
- * Depends on: data.js, gameCalc.js, state.js, plotLogic.js
+ * Depends on: data.js, gameCalc.js, state.js, plotLogic.js, templates.js
  */
 
 
@@ -25,92 +28,45 @@ function renderCropTable(viableCrops) {
   const tbody = document.getElementById("plan-body");
 
   if (!viableCrops.length) {
-    tbody.innerHTML = `<tr><td colspan="7" style="color:var(--txt3);padding:12px 0">
-      No crops can complete a full harvest with days remaining.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7">${tplEmpty("No crops can complete a full harvest with days remaining.")}</td></tr>`;
     return;
   }
 
-  // Detect active fertilizer from income plots (use first one found)
-  const activeFertilizers = getIncomePlots()
-    .map(p => p.boost || "none")
-    .filter(b => b !== "none");
-  const activeFertilizerKey = activeFertilizers.length ? activeFertilizers[0] : "none";
-
-  // Scale the rank bar relative to the highest effective g/day
   const maxEffectiveGpd = Math.max(
-    ...viableCrops.map(c => calcEffectiveGoldPerDay(c, STATE.season, STATE.day, STATE.equipment)),
+    ...viableCrops.map(c => calcEffectiveGoldPerDay(c)),
     1
   );
 
-  // Inject fertilizer caption if any income plots have a speed boost
-  if (activeFertilizerKey !== "none") {
-    const existingCaption = tbody.previousElementSibling;
-    if (!existingCaption || existingCaption.tagName !== "CAPTION") {
-      tbody.insertAdjacentHTML("beforebegin",
-        `<caption style="font-size:10px;color:var(--txt3);text-align:left;padding:0 0 4px;caption-side:top">
-          Growth times show base → fertilized (${FERTILIZER_CONFIGS[activeFertilizerKey].label} detected on income plots)
-        </caption>`
-      );
-    }
-  }
-
   tbody.innerHTML = viableCrops.map((crop, rankIndex) => {
-    // Rank label for top entries
-    let rankLabel = "";
-    if (rankIndex === 0) rankLabel = `<span style="color:#BA7517;font-weight:700">★ Best</span>`;
-    else if (rankIndex < 3) rankLabel = `<span style="color:var(--green)">▲ Top 3</span>`;
-
-    // Type/trait badges
-    const harvestTypeBadge = crop.re ? `<span class="badge bg-pink">regrows</span>` : `<span class="badge bg-gray">single</span>`;
-    const giantBadge = crop.giant ? `<span class="badge bg-amber">giant</span>` : "";
-    const supplyBadge = crop.supply ? `<span class="badge bg-teal">supply</span>` : "";
-    const multiSeasonBadge = crop.seasons.length > 1 ? `<span class="badge bg-purple">multi</span>` : "";
-    const badgesHtml = [harvestTypeBadge, giantBadge, supplyBadge, multiSeasonBadge].filter(Boolean).join(" ");
-
-    // Equipment warning for dimmed crops
+    // Equipment warning
     const missingEquipment = crop.reqE && !ownsEquipment(crop.reqE);
     const equipWarning = missingEquipment
-      ? `<div style="font-size:10px;color:var(--red)">Needs ${crop.reqE}</div>` : "";
+      ? `<div class="equip-warn">Needs ${crop.reqE}</div>` : "";
 
-    // Growth time display: show base → fertilized if fertilizer is active
+    // Growth time display
     const baseGrowDays = crop.grow;
-    const fertilizedGrowDays = activeFertilizerKey !== "none"
-      ? applyFertilizerToGrowTime(crop.grow, activeFertilizerKey) : null;
-    const growDisplay = (fertilizedGrowDays && fertilizedGrowDays !== baseGrowDays)
-      ? `${baseGrowDays}d <span style="color:var(--green);font-size:10px">→${fertilizedGrowDays}d</span>`
-      : `${baseGrowDays}d`;
-    const regrowDisplay = crop.re && crop.regrow
-      ? `<div style="font-size:10px;color:var(--txt3)">+${crop.regrow}d regrow</div>` : "";
 
-    // Gold/day: show artisan-boosted value in green if higher than raw
-    const effectiveGpd = calcEffectiveGoldPerDay(crop, STATE.season, STATE.day, STATE.equipment);
-    const rawGpd = Math.round(calcRawGoldPerDay(crop, STATE.season, STATE.day, "none"));
-    const isArtisanBoosted = effectiveGpd > calcRawGoldPerDay(crop, STATE.season, STATE.day, "none") + 1;
+    const growDisplay = `${baseGrowDays}d`
+
+    const regrowDisplay = crop.re && crop.regrow
+      ? `<span class="grow-regrow">+${crop.regrow}d regrow</span>` : "";
+
+    // Gold/day display
+    const effectiveGpd = calcEffectiveGoldPerDay(crop);
+    const rawGpd = Math.round(calcRawGoldPerDay(crop));
+    console.log(`Crop: ${crop.name}, Effective GPD: ${effectiveGpd}, Raw GPD: ${rawGpd}`);
+    const isArtisanBoosted = effectiveGpd > rawGpd + 1;
     const gpdDisplay = isArtisanBoosted
-      ? `<span style="color:#27500A;font-weight:700">${Math.round(effectiveGpd)}</span>
-         <div style="font-size:9px;color:var(--txt3)">${rawGpd} raw</div>`
+      ? `<span class="gpd-artisan">${Math.round(effectiveGpd)}</span>
+         <div class="gpd-raw-sub">${rawGpd} raw</div>`
       : rawGpd;
 
-    // Rank bar fill (% of best crop)
     const rankBarPercent = Math.round(Math.min(100, (effectiveGpd / maxEffectiveGpd) * 100));
 
-    return `<tr${missingEquipment ? ` style="opacity:.45"` : ""}>
-      <td>
-        <div style="font-weight:600">${crop.name}</div>
-        <div style="display:flex;gap:2px;flex-wrap:wrap;margin-top:2px">${badgesHtml}</div>
-        ${crop.src ? `<div style="font-size:10px;color:var(--txt3)">${crop.src}</div>` : ""}
-        ${equipWarning}
-      </td>
-      <td style="font-size:11px;color:var(--txt2)">${crop.seasons.join("+")}</td>
-      <td>Day ${crop._lastPlantDay}</td>
-      <td style="font-size:12px">${growDisplay}${regrowDisplay}</td>
-      <td>${crop._harvests}×</td>
-      <td>
-        ${gpdDisplay}
-        <div class="rank-bar"><div class="rank-fill" style="width:${rankBarPercent}%"></div></div>
-      </td>
-      <td style="font-size:11px;color:var(--txt2)">${crop.note} ${rankLabel}</td>
-    </tr>`;
+    return tplCropTableRow({
+      crop, rankIndex, growDisplay, regrowDisplay, gpdDisplay,
+      rankBarPercent, dimmed: missingEquipment, equipWarning,
+    });
   }).join("");
 }
 
@@ -127,126 +83,91 @@ function renderCropTable(viableCrops) {
 function renderBuyList(allViableCrops) {
   const el = document.getElementById("buy-list");
 
-  // Winter: no outdoor planting
   if (STATE.season === "Winter") {
-    el.innerHTML = `<div style="color:var(--txt2);font-size:12px;line-height:1.6">
-      No outdoor planting in winter. Focus on:<br>
-      • Artisan goods — keep kegs, jars, and presses running<br>
-      • Forage — hoe for Snow Yam and Winter Root<br>
-      • Greenhouse harvests and fruit trees<br>
-      • Animal care and friendship building
-    </div>`;
+    el.innerHTML = tplWinterBuyList();
     return;
   }
 
   let html = "";
   let runningTotalCost = 0;
 
-  // ── Festival warnings (upcoming festivals within 7 days)
+  // ── Festival warnings
   const upcomingFestivals = (FESTIVALS[STATE.season] || [])
     .filter(f => f.day >= STATE.day && f.day <= STATE.day + 7);
   upcomingFestivals.forEach(f => {
-    html += `<div class="festival-box">${f.icon} <strong>Day ${f.day}: ${f.name}</strong> — ${f.note}</div>`;
+    html += tplFestivalBox(f.icon, f.name, f.day, f.note);
   });
 
   // ── Season tips
   if (STATE.season === "Spring" && STATE.year === 1) {
-    html += `<div class="tip-box" style="margin-bottom:10px">
-      <strong>Year 1 Spring:</strong> Plant Parsnips day 1 for fast early gold.
-      Egg Festival on day 13 → buy Strawberry seeds (100g each) — best spring crop.
-    </div>`;
+    html += tplTipBox(`<strong>Year 1 Spring:</strong> Plant Parsnips day 1 for fast early gold.
+      Egg Festival on day 13 → buy Strawberry seeds (100g each) — best spring crop.`);
   } else if (STATE.season === "Spring" && STATE.day <= 12) {
-    html += `<div class="tip-box" style="margin-bottom:10px">
-      <strong>Reminder:</strong> Egg Festival day 13 — budget for Strawberry seeds (100g each). Don't miss it.
-    </div>`;
+    html += tplTipBox(`<strong>Reminder:</strong> Egg Festival day 13 — budget for Strawberry seeds (100g each). Don't miss it.`);
   }
 
-  // ── Get assignment data
-  const { instances: incInstances, assignments: plotAssignments,
-    flowerPool, flowerSlotIndex, utilitySlotIndex } = assignIncomePlots(allViableCrops);
+  // ── Assignment data
+  const { instances: incInstances, assignments: plotAssignments, incomeCrops,
+    flowerPool, nonFlowerCrops, flowerSlotIndex, utilitySlotIndex } = assignIncomePlots(allViableCrops);
   const giantPlan = calcGiantPlotPlan(allViableCrops);
   const supplyPlan = calcSupplyPlotPlan(allViableCrops);
-  const incomeCrops = filterIncomePlotCrops(allViableCrops, STATE.equipment);
-  const nonFlowerCrops = incomeCrops.filter(c => !c.flower);
   const reservedSlots = new Set([flowerSlotIndex, utilitySlotIndex].filter(i => i !== -1));
 
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────
   // INCOME PLOTS
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────
   const incomePlots = getIncomePlots();
   if (incomePlots.length > 0) {
     const totalIncomeTiles = getTotalIncomeTiles();
     const totalInstanceCount = incInstances.length;
     const isManualMode = STATE.incomeManual;
 
-    const manualToggleBtn = `<button class="toggle-btn${isManualMode ? " alt" : ""}"
-      onclick="toggleIncomeManualMode(window.__lastCrops || [])"
-      title="Toggle manual crop assignment for profit plots">
-      ${isManualMode ? "✏ Manual" : "⚙ Auto"}
-    </button>`;
+    const manualToggleBtn = tplToggleBtn(
+      isManualMode ? "✏ Manual" : "⚙ Auto",
+      "toggleIncomeManualMode(window.__lastCrops || [])",
+      isManualMode,
+      "Toggle manual crop assignment for profit plots"
+    );
 
-    html += `<div class="bgh">
-      <span>Income plots — ${totalInstanceCount} individual plot${totalInstanceCount !== 1 ? "s" : ""} · ${totalIncomeTiles} tiles</span>
-      <span style="display:flex;align-items:center;gap:6px">
-        <span style="font-size:10px;color:var(--txt3)">${isManualMode ? "manual assignment" : "round-robin · variety preserved"}</span>
-        ${manualToggleBtn}
-      </span>
-    </div>`;
+    html += tplBuyHeader(
+      `Income plots — ${totalInstanceCount} individual plot${totalInstanceCount !== 1 ? "s" : ""} · ${totalIncomeTiles} tiles`,
+      `<span class="bgh-mode">${isManualMode ? "manual assignment" : "round-robin · variety preserved"}</span>${manualToggleBtn}`
+    );
 
     if (!incomeCrops.length) {
-      html += `<div style="font-size:12px;color:var(--txt3);padding:6px 0">
-        No viable income crops for the remaining days. Consider repurposing these plots for fast supply crops.
-      </div>`;
+      html += `<div class="no-income-note">No viable income crops for the remaining days. Consider repurposing these plots for fast supply crops.</div>`;
     } else {
-
-      // Helper: summarise which plot sizes are represented in a list of instances
-      function buildPlotSizeLabel(instanceList) {
-        const counts = {};
-        instanceList.forEach(({ plot }) => {
-          const key = `${plot.w}×${plot.h}`;
-          counts[key] = (counts[key] || 0) + 1;
-        });
-        return Object.entries(counts).map(([k, v]) => `${v}× ${k}`).join(", ");
-      }
-
       // ── Flower slot
       if (flowerSlotIndex !== -1 && flowerPool.length) {
         const inst = incInstances[flowerSlotIndex];
         const flowerCrop = plotAssignments[flowerSlotIndex];
         if (flowerCrop) {
           const fertKey = inst.plot.boost || "none";
-          const seedsNeeded = calcSeedsNeeded(flowerCrop, inst.usableTiles, fertKey, STATE.season, STATE.day);
+          const seedsNeeded = calcSeedsNeeded(flowerCrop, inst.usableTiles, fertKey);
           const tileCost = seedsNeeded * flowerCrop.cost;
           runningTotalCost += tileCost;
-          const canAfford = STATE.gold >= tileCost;
-          const harvests = countHarvests(flowerCrop, STATE.season, STATE.day, fertKey);
+          const harvests = countHarvests(flowerCrop, fertKey);
 
           const nextFlowerIdx = ((STATE.flowerAltIdx || 0) + 1) % flowerPool.length;
-          const cycleFlowerBtn = flowerPool.length > 1
-            ? `<button class="toggle-btn${(STATE.flowerAltIdx || 0) > 0 ? " alt" : ""}"
-                onclick="toggleFlowerCrop(window.__lastCrops || [])">⇄ ${flowerPool[nextFlowerIdx].name}</button>`
+          const cycleBtn = flowerPool.length > 1
+            ? tplToggleBtn(
+              `⇄ ${flowerPool[nextFlowerIdx].name}`,
+              "toggleFlowerCrop(window.__lastCrops || [])",
+              (STATE.flowerAltIdx || 0) > 0
+            )
             : "";
 
-          html += `<div class="bi" style="background:#F9F6FF;border-radius:6px;padding:6px 8px;margin-bottom:2px">
-            <div style="flex:1">
-              <div style="font-weight:700">
-                ${flowerCrop.name} <span class="badge bg-pink">flower</span>
-                <span style="font-size:10px;color:var(--txt3)">(${inst.plot.w}×${inst.plot.h} plot)</span>
-                ${flowerPool.length > 1 ? cycleFlowerBtn : ""}
-              </div>
-              <div style="color:var(--txt2);font-size:12px">For gifting, Bee House boost, bundles and recipes</div>
-              <div style="font-size:11px;color:var(--txt3)">
-                ${harvests} harvest${harvests !== 1 ? "s" : ""} · ${flowerCrop.sell}g raw · ${flowerCrop.note.split(".")[0]}
-              </div>
-              ${flowerPool.length > 1
-              ? `<div style="font-size:10px;color:var(--txt3);margin-top:2px">Alt flowers: ${flowerPool.map(f => f.name).join(", ")}</div>`
-              : ""}
-            </div>
-            <div style="text-align:right;white-space:nowrap">
-              <div style="font-size:13px;font-weight:700">${seedsNeeded} seeds</div>
-              <div style="font-size:12px;color:${canAfford ? "#27500A" : "#A32D2D"}">${tileCost.toLocaleString()}g${canAfford ? " ✓" : ""}</div>
-            </div>
-          </div>`;
+          const altLine = flowerPool.length > 1
+            ? `<div class="meta-line">Alt flowers: ${flowerPool.map(f => f.name).join(", ")}</div>` : "";
+
+          html += tplFlowerItem({
+            titleHtml: `${flowerCrop.name} ${tplBadge("flower", "bg-pink")} <span class="meta-line">(${inst.plot.w}×${inst.plot.h} plot)</span> ${cycleBtn}`,
+            subtitleHtml: `For gifting, Bee House boost, bundles and recipes`,
+            noteLine: `${harvests} harvest${harvests !== 1 ? "s" : ""} · ${flowerCrop.sell}g raw · ${flowerCrop.note.split(".")[0]}${altLine}`,
+            seedCount: seedsNeeded,
+            cost: tileCost,
+            canAfford: STATE.gold >= tileCost,
+          });
         }
       }
 
@@ -257,61 +178,53 @@ function renderBuyList(allViableCrops) {
         const utilityRotation = getUtilityPlotRotation(nonFlowerCrops, fertKey);
 
         if (utilityRotation.length) {
-          // Aggregate seed cost per crop across all rotation slots
           const seedsByUtilityCrop = {};
+          const harvestsPerUtilityCrop = {};
           utilityRotation.forEach(({ crop }) => {
             if (!seedsByUtilityCrop[crop.name]) seedsByUtilityCrop[crop.name] = { crop, seeds: 0 };
             seedsByUtilityCrop[crop.name].seeds += inst.usableTiles;
+
+            if (!harvestsPerUtilityCrop[crop.name]) harvestsPerUtilityCrop[crop.name] = 0;
+            harvestsPerUtilityCrop[crop.name]++;
           });
           const utilityEntries = Object.values(seedsByUtilityCrop);
           const utilityTotalCost = utilityEntries.reduce((sum, e) => sum + e.seeds * e.crop.cost, 0);
           runningTotalCost += utilityTotalCost;
-          const canAfford = STATE.gold >= utilityTotalCost;
 
-          const cropRotationLabel = utilityRotation
-            .map((slot, i) => `${i + 1}. ${slot.crop.name} (day ${slot.plantDay}→${slot.harvestDay})`)
-            .join(" · ");
 
-          html += `<div class="bi" style="background:#EAF3DE;border-radius:6px;padding:6px 8px;margin-bottom:2px">
-            <div style="flex:1">
-              <div style="font-weight:700">
-                Utility plot <span class="badge bg-teal">utility</span> <span class="badge bg-green" style="margin-left:3px">variety</span>
-                <span style="font-size:10px;color:var(--txt3)">(${inst.plot.w}×${inst.plot.h} plot · rotates each harvest)</span>
-              </div>
-              <div style="font-size:11px;color:var(--txt3);line-height:1.6">${cropRotationLabel}</div>
-              ${utilityEntries.map(e => {
-            const h = countHarvests(e.crop, STATE.season, STATE.day, fertKey);
-            return `<div style="font-size:11px;color:var(--txt3)">→ ${e.crop.name}: ${e.seeds} seeds · ${e.crop.cost}g each · ${e.crop.note.split(".")[0]}</div>`;
-          }).join("")}
-            </div>
-            <div style="text-align:right;white-space:nowrap">
-              <div style="font-size:13px;font-weight:700">${utilityEntries.length} crop${utilityEntries.length !== 1 ? "s" : ""}</div>
-              <div style="font-size:12px;color:${canAfford ? "#27500A" : "#A32D2D"}">${utilityTotalCost.toLocaleString()}g${canAfford ? " ✓" : ""}</div>
-            </div>
-          </div>`;
+
+          const detailLines = utilityEntries.map(e =>
+            `<div class="util-detail-line">→ ${e.crop.name}: ${harvestsPerUtilityCrop[e.crop.name]} harvests · ${e.seeds} seeds · ${e.crop.cost}g each · ${e.crop.note.split(".")[0]}</div>`
+          ).join("");
+
+          html += tplUtilityItem({
+            titleHtml: `Utility plot ${tplBadge("utility", "bg-teal")} ${tplBadge("variety", "bg-green")} <span class="meta-line">(${inst.plot.w}×${inst.plot.h} plot · rotates each harvest)</span>`,
+            subtitleHtml: detailLines,
+            noteLine: "",
+            cropCount: utilityEntries.length,
+            cost: utilityTotalCost,
+            canAfford: STATE.gold >= utilityTotalCost,
+          });
         }
       }
 
       // ── Profit crops (auto or manual)
       if (isManualMode) {
-        html += _renderManualIncomeProfitRows(allViableCrops, incInstances, reservedSlots, runningTotalCost);
-        // Note: _renderManualIncomeProfitRows mutates runningTotalCost by reference isn't
-        // possible in JS — we recalculate total at the end instead.
-        // Re-sum from manual assignments for the total line.
-        const profitCostFromManual = _calcManualProfitCost(allViableCrops, incInstances, reservedSlots);
-        runningTotalCost += profitCostFromManual;
+        const { html: profitHtml, cost: profitCost } = _renderManualIncomeProfitRows(allViableCrops, incInstances, reservedSlots);
+        html += profitHtml;
+        runningTotalCost += profitCost;
       } else {
         html += _renderAutoProfitRows(allViableCrops, incInstances, plotAssignments, reservedSlots);
-        // Sum up auto-assigned costs
-        const profitCostFromAuto = _calcAutoProfitCost(incInstances, plotAssignments, reservedSlots);
-        runningTotalCost += profitCostFromAuto;
+        runningTotalCost += _calcAutoProfitCost(incInstances, plotAssignments, reservedSlots);
       }
     }
+  } else {
+    html += `<div class="no-income-note">No income plots defined. Add some in the plot editor to get tailored crop recommendations for them.</div>`;
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────
   // GIANT PLOTS
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────
   const giantPlots = getGiantPlots();
   if (giantPlots.length > 0) {
     const { mode, giantCrop, allGiantCrops, fillCrop, giantBlocks, leftoverTiles, totalGiantTiles } = giantPlan;
@@ -319,87 +232,78 @@ function renderBuyList(allViableCrops) {
     const hasManyGiantCrops = allGiantCrops && allGiantCrops.length > 1;
     const nextGiantIdx = ((STATE.giantCropAltIdx || 0) + 1) % (allGiantCrops?.length || 1);
     const cycleGiantBtn = hasManyGiantCrops
-      ? `<button class="toggle-btn${(STATE.giantCropAltIdx || 0) > 0 ? " alt" : ""}"
-          onclick="toggleGiantCrop(window.__lastCrops || [])">⇄ Switch (${allGiantCrops[nextGiantIdx]?.name || ""})</button>`
+      ? tplToggleBtn(
+        `⇄ Switch (${allGiantCrops[nextGiantIdx]?.name || ""})`,
+        "toggleGiantCrop(window.__lastCrops || [])",
+        (STATE.giantCropAltIdx || 0) > 0
+      )
       : "";
 
     if (mode === "giant" && giantCrop) {
-      const giantSeedsNeeded = giantBlocks * 9;
+      const giantSeedsNeeded = giantBlocks > 0 ? giantBlocks * 9 : totalGiantTiles;
       const giantSeedCost = giantSeedsNeeded * giantCrop.cost;
       runningTotalCost += giantSeedCost;
 
-      html += `<div class="bgh" style="margin-top:8px">
-        <span>Giant plots — ${giantBlocks} block${giantBlocks !== 1 ? "s" : ""} × 9 + ${leftoverTiles} fill</span>
-        ${cycleGiantBtn}
-      </div>
-      <div class="bi">
-        <div style="flex:1">
-          <div style="font-weight:700">${giantCrop.name} <span class="badge bg-amber">giant crop</span></div>
-          <div style="color:var(--txt2);font-size:12px">
-            ${giantBlocks} block${giantBlocks !== 1 ? "s" : ""} of 3×3 = ${giantSeedsNeeded} seeds · leave nothing adjacent to 3×3 groups
-          </div>
-          <div style="font-size:11px;color:var(--txt3)">
-            ~10% giant-form chance/night once mature · ~2× yield on formation · ${giantCrop.note.split(".")[0]}
-          </div>
-        </div>
-        <div style="text-align:right;white-space:nowrap">
-          <div style="font-size:13px;font-weight:700">${giantSeedsNeeded} seeds</div>
-          <div style="font-size:12px">${giantSeedCost.toLocaleString()}g</div>
-        </div>
-      </div>`;
+      if (giantBlocks === 0) {
+        html += '<span class="bgh-warn">⚠ no time for giants</span>'
+      }
 
-      // Fill tiles (leftover space outside 3×3 blocks)
+      html += tplBuyHeader(
+        giantBlocks > 0 ? `Giant plots — ${giantBlocks} block${giantBlocks !== 1 ? "s" : ""} × 9 + ${leftoverTiles} fill` : "Giant plots — No blocks available for giant crops",
+        cycleGiantBtn
+      );
+
+      html += tplBuyItem({
+        titleHtml: `${giantCrop.name} ${tplBadge("giant crop", "bg-amber")}`,
+        subtitleHtml: `${giantBlocks > 0 ? `${giantBlocks} block${giantBlocks !== 1 ? "s" : ""} of 3×3 = ` : ""}${giantSeedsNeeded} seeds · leave nothing adjacent to 3×3 groups`,
+        noteLine: giantBlocks > 0 ? `~10% giant-form chance/night once mature · ~2× yield on formation · ${giantCrop.note.split(".")[0]}` : "no chance of giant-form crops · need better plot layout",
+        seedCount: giantSeedsNeeded,
+        cost: giantSeedCost,
+        canAfford: STATE.gold >= giantSeedCost,
+      });
+
       if (leftoverTiles > 0 && fillCrop) {
-        const fillSeeds = calcSeedsNeeded(fillCrop, leftoverTiles, "none", STATE.season, STATE.day);
+        const fillSeeds = calcSeedsNeeded(fillCrop, leftoverTiles, "none");
         const fillCost = fillSeeds * fillCrop.cost;
         runningTotalCost += fillCost;
-        html += `<div class="bi">
-          <div style="flex:1">
-            <div style="font-weight:700">${fillCrop.name}
-              <span style="font-size:10px;font-weight:400;color:var(--txt3)">(${leftoverTiles} fill tiles)</span>
-            </div>
-            <div style="font-size:11px;color:var(--txt3)">Fill tiles outside giant blocks — best income crop</div>
-          </div>
-          <div style="text-align:right;white-space:nowrap">
-            <div style="font-size:13px;font-weight:700">${fillSeeds} seeds</div>
-            <div style="font-size:12px">${fillCost.toLocaleString()}g</div>
-          </div>
-        </div>`;
+        html += tplBuyItem({
+          titleHtml: `${fillCrop.name} <span class="fill-note">(${leftoverTiles} fill tiles)</span>`,
+          noteLine: "Fill tiles outside giant blocks — best income crop",
+          seedCount: fillSeeds,
+          cost: fillCost,
+          canAfford: STATE.gold >= fillCost,
+        });
       }
 
     } else {
-      // Not enough days for giant crops — fall back to best income crop
-      html += `<div class="bgh" style="margin-top:8px">
-        <span>Giant plots — ${totalGiantTiles} tiles</span>
-        <span style="font-size:10px;color:#BA7517">⚠ no time for giants</span>
-      </div>
-      <div style="font-size:12px;color:var(--txt2);padding:4px 0 6px">
-        Not enough days for giant crops. Planting best income crops instead.
-      </div>`;
+      html += tplBuyHeader(
+        `Giant plots — ${totalGiantTiles} tiles`,
+        `<span class="bgh-warn">⚠ no time for giants</span>`
+      );
+      html += `<div class="no-giant-note">Not enough days for giant crops. Planting best income crops instead.</div>`;
 
       if (fillCrop) {
-        const fallbackSeeds = calcSeedsNeeded(fillCrop, totalGiantTiles, "none", STATE.season, STATE.day);
+        const fallbackSeeds = calcSeedsNeeded(fillCrop, totalGiantTiles, "none");
         const fallbackCost = fallbackSeeds * fillCrop.cost;
         runningTotalCost += fallbackCost;
-        const harvests = countHarvests(fillCrop, STATE.season, STATE.day, "none");
-        html += `<div class="bi">
-          <div style="flex:1">
-            <div style="font-weight:700">${fillCrop.name}</div>
-            <div style="color:var(--txt2);font-size:12px">${totalGiantTiles} tiles · ${harvests} harvest${harvests !== 1 ? "s" : ""}</div>
-            <div style="font-size:11px;color:var(--txt3)">${fillCrop.note.split(".")[0]}</div>
-          </div>
-          <div style="text-align:right;white-space:nowrap">
-            <div style="font-size:13px;font-weight:700">${fallbackSeeds} seeds</div>
-            <div style="font-size:12px">${fallbackCost.toLocaleString()}g</div>
-          </div>
-        </div>`;
+        const harvests = countHarvests(fillCrop, "none");
+        html += tplBuyItem({
+          titleHtml: fillCrop.name,
+          subtitleHtml: `${totalGiantTiles} tiles · ${harvests} harvest${harvests !== 1 ? "s" : ""}`,
+          noteLine: fillCrop.note.split(".")[0],
+          seedCount: fallbackSeeds,
+          cost: fallbackCost,
+          canAfford: STATE.gold >= fallbackCost,
+        });
       }
     }
+  } else {
+    html += `<div class="no-giant-note">No giant crop plots defined. Add some in the plot editor to get tailored crop recommendations for them.</div>`;
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────
   // SUPPLY PLOTS
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────
   const supplyPlotDefs = getSupplyPlots();
   if (supplyPlotDefs.length > 0) {
     const { feedPlan, feedTilesTotal, fillTiles, fillCrop: supplyFillCrop,
@@ -408,167 +312,126 @@ function renderBuyList(allViableCrops) {
     const modeLabel = isFeedMode ? "🌾 Feed mode" : "🌿 Variety mode";
 
     const supplyToggleBtn = allSupplyCrops.length
-      ? `<button class="toggle-btn${!isFeedMode ? " alt" : ""}"
-          onclick="toggleSupplyMode(window.__lastCrops || [])">
-          ${isFeedMode ? "⇄ already stocked →" : "⇄ need hay →"}
-        </button>`
+      ? tplToggleBtn(
+        isFeedMode ? "⇄ already stocked →" : "⇄ need hay →",
+        "toggleSupplyMode(window.__lastCrops || [])",
+        !isFeedMode
+      )
       : "";
 
-    html += `<div class="bgh" style="margin-top:8px">
-      <span>Supply plots — ${totalSupplyTiles} tiles · ${modeLabel}</span>
-      ${supplyToggleBtn}
-    </div>`;
+    html += tplBuyHeader(
+      `Supply plots — ${totalSupplyTiles} tiles · ${modeLabel}`,
+      supplyToggleBtn
+    );
 
     if (!allSupplyCrops.length) {
-      // No supply crops this season — use fallback income crop
-      html += `<div style="font-size:12px;color:var(--txt2);padding:4px 0 6px">
-        No supply crops this season. Using best income crops as fallback.
-      </div>`;
+      html += `<div class="no-supply-note">No supply crops this season. Using best income crops as fallback.</div>`;
       const fallback = filterIncomePlotCrops(allViableCrops, STATE.equipment)[0];
       if (fallback) {
-        const fSeeds = calcSeedsNeeded(fallback, totalSupplyTiles, "none", STATE.season, STATE.day);
+        const fSeeds = calcSeedsNeeded(fallback, totalSupplyTiles, "none");
         const fCost = fSeeds * fallback.cost;
         runningTotalCost += fCost;
-        const fHarvests = countHarvests(fallback, STATE.season, STATE.day, "none");
-        html += `<div class="bi">
-          <div style="flex:1">
-            <div style="font-weight:700">${fallback.name} <span style="font-size:10px;font-weight:400;color:var(--txt3)">(fallback)</span></div>
-            <div style="color:var(--txt2);font-size:12px">${totalSupplyTiles} tiles · ${fHarvests} harvest${fHarvests !== 1 ? "s" : ""}</div>
-          </div>
-          <div style="text-align:right;white-space:nowrap">
-            <div style="font-size:13px;font-weight:700">${fSeeds} seeds</div>
-            <div style="font-size:12px">${fCost.toLocaleString()}g</div>
-          </div>
-        </div>`;
+        const fHarvests = countHarvests(fallback, "none");
+        html += tplBuyItem({
+          titleHtml: `${fallback.name} <span class="fallback-note">(fallback)</span>`,
+          subtitleHtml: `${totalSupplyTiles} tiles · ${fHarvests} harvest${fHarvests !== 1 ? "s" : ""}`,
+          seedCount: fSeeds,
+          cost: fCost,
+          canAfford: STATE.gold >= fCost,
+        });
       }
 
     } else if (isFeedMode) {
-      // Feed-first mode
       if (feedPlan.length && feedTilesTotal > 0) {
-        const firstSupplyPlot = supplyPlotDefs[0];
-        const fertKey = firstSupplyPlot?.boost || "none";
-
+        const fertKey = supplyPlotDefs[0]?.boost || "none";
         feedPlan.forEach(({ crop, tiles }) => {
-          const fHarvests = countHarvests(crop, STATE.season, STATE.day, fertKey);
-          const fSeeds = calcSeedsNeeded(crop, tiles, fertKey, STATE.season, STATE.day);
+          const fHarvests = countHarvests(crop, fertKey);
+          const fSeeds = calcSeedsNeeded(crop, tiles, fertKey);
           const fCost = fSeeds * crop.cost;
           runningTotalCost += fCost;
-
-          html += `<div class="bi">
-            <div style="flex:1">
-              <div style="font-weight:700">${crop.name} <span class="badge bg-teal">hay/feed</span></div>
-              <div style="color:var(--txt2);font-size:12px">
-                ${tiles} tiles · Mill → animal feed · ~${tiles * fHarvests} of ${winterHayNeeded} hay
-              </div>
-              <div style="font-size:11px;color:var(--txt3)">${crop.note.split(".")[0]}</div>
-            </div>
-            <div style="text-align:right;white-space:nowrap">
-              <div style="font-size:13px;font-weight:700">${fSeeds} seeds</div>
-              <div style="font-size:12px">${fCost.toLocaleString()}g</div>
-            </div>
-          </div>`;
+          html += tplBuyItem({
+            titleHtml: `${crop.name} ${tplBadge("hay/feed", "bg-teal")}`,
+            subtitleHtml: `${tiles} tiles · Mill → animal feed · ~${tiles * fHarvests} of ${winterHayNeeded} hay`,
+            noteLine: crop.note.split(".")[0],
+            seedCount: fSeeds,
+            cost: fCost,
+            canAfford: STATE.gold >= fCost,
+          });
         });
       } else if (!hasHayCrops) {
-        html += `<div style="font-size:11px;color:var(--txt3);padding:3px 0">
-          ⚠ No feed crops available this season — stock hay before winter or enable Mill.
-        </div>`;
+        html += `<div class="no-hay-warn">⚠ No feed crops available this season — stock hay before winter or enable Mill.</div>`;
       } else {
-        html += `<div style="font-size:11px;color:var(--green);padding:3px 0">
-          ✓ Hay estimation shows current season can cover needs — review alternate plan.
-        </div>`;
+        html += `<div class="hay-ok-note">✓ Hay estimation shows current season can cover needs — review alternate plan.</div>`;
       }
 
-      // Fill tiles with best non-hay supply crop
       if (fillTiles > 0 && supplyFillCrop) {
-        const firstSupplyPlot = supplyPlotDefs[0];
-        const fertKey = firstSupplyPlot?.boost || "none";
-        const fSeeds = calcSeedsNeeded(supplyFillCrop, fillTiles, fertKey, STATE.season, STATE.day);
+        const fertKey = supplyPlotDefs[0]?.boost || "none";
+        const fSeeds = calcSeedsNeeded(supplyFillCrop, fillTiles, fertKey);
         const fCost = fSeeds * supplyFillCrop.cost;
         runningTotalCost += fCost;
-        html += `<div class="bi">
-          <div style="flex:1">
-            <div style="font-weight:700">${supplyFillCrop.name}
-              <span style="font-size:10px;font-weight:400;color:var(--txt3)">(${fillTiles} remaining tiles)</span>
-            </div>
-            <div style="color:var(--txt2);font-size:12px">${supplyFillCrop.note.split(".")[0]}</div>
-          </div>
-          <div style="text-align:right;white-space:nowrap">
-            <div style="font-size:13px;font-weight:700">${fSeeds} seeds</div>
-            <div style="font-size:12px">${fCost.toLocaleString()}g</div>
-          </div>
-        </div>`;
+        html += tplBuyItem({
+          titleHtml: `${supplyFillCrop.name} <span class="fill-note">(${fillTiles} remaining tiles)</span>`,
+          subtitleHtml: supplyFillCrop.note.split(".")[0],
+          seedCount: fSeeds,
+          cost: fCost,
+          canAfford: STATE.gold >= fCost,
+        });
       }
 
     } else {
-      // Variety mode — spread tiles evenly across all supply crops
-      html += `<div style="font-size:11px;color:var(--amber);padding:3px 0 5px">
-        Hay stocked — all supply tiles going to variety crops.
-      </div>`;
+      // Variety mode
+      html += `<div class="hay-stocked-note">Hay stocked — all supply tiles going to variety crops.</div>`;
       const varietyList = varietyCrops.length ? varietyCrops : allSupplyCrops;
       const tilesEach = Math.floor(totalSupplyTiles / varietyList.length);
-      const tileRemainder = totalSupplyTiles % varietyList.length;
-      const firstSupplyPlot = supplyPlotDefs[0];
-      const fertKey = firstSupplyPlot?.boost || "none";
+      const tileRem = totalSupplyTiles % varietyList.length;
+      const fertKey = supplyPlotDefs[0]?.boost || "none";
 
       varietyList.forEach((vc, i) => {
-        const tiles = tilesEach + (i < tileRemainder ? 1 : 0);
+        const tiles = tilesEach + (i < tileRem ? 1 : 0);
         if (!tiles) return;
-        const vSeeds = calcSeedsNeeded(vc, tiles, fertKey, STATE.season, STATE.day);
+        const vSeeds = calcSeedsNeeded(vc, tiles, fertKey);
         const vCost = vSeeds * vc.cost;
-        const vHarvests = countHarvests(vc, STATE.season, STATE.day, fertKey);
+        const vHarvests = countHarvests(vc, fertKey);
         runningTotalCost += vCost;
-        html += `<div class="bi">
-          <div style="flex:1">
-            <div style="font-weight:700">${vc.name} <span class="badge bg-green">variety</span></div>
-            <div style="color:var(--txt2);font-size:12px">
-              ${tiles} tiles · ${vHarvests} harvest${vHarvests !== 1 ? "s" : ""} · ${vc.note.split(".")[0]}
-            </div>
-          </div>
-          <div style="text-align:right;white-space:nowrap">
-            <div style="font-size:13px;font-weight:700">${vSeeds} seeds</div>
-            <div style="font-size:12px">${vCost.toLocaleString()}g</div>
-          </div>
-        </div>`;
+        html += tplBuyItem({
+          titleHtml: `${vc.name} ${tplBadge("variety", "bg-green")}`,
+          subtitleHtml: `${tiles} tiles · ${vHarvests} harvest${vHarvests !== 1 ? "s" : ""} · ${vc.note.split(".")[0]}`,
+          seedCount: vSeeds,
+          cost: vCost,
+          canAfford: STATE.gold >= vCost,
+        });
       });
     }
+  } else {
+    html += `<div class="no-supply-note">No supply plots defined. Add some in the plot editor to get tailored crop recommendations for them.</div>`;
   }
 
   // ── Empty state
   if (!incomePlots.length && !giantPlots.length && !supplyPlotDefs.length) {
-    el.innerHTML = `<div style="color:var(--txt3)">Add farm plots above to generate your shopping list.</div>`;
+    el.innerHTML = tplEmpty("Add farm plots above to generate your shopping list.");
     return;
   }
 
   // ── Grand total
-  const goldRemaining = STATE.gold - runningTotalCost;
-  html += `<div class="buy-total">
-    <span>Estimated seed cost</span>
-    <span style="color:${goldRemaining >= 0 ? "#27500A" : "#A32D2D"}">
-      ${runningTotalCost.toLocaleString()}g
-      ${goldRemaining >= 0
-      ? `(${goldRemaining.toLocaleString()}g left)`
-      : `(short ${Math.abs(goldRemaining).toLocaleString()}g)`}
-    </span>
-  </div>`;
-
+  html += tplBuyTotal(runningTotalCost, STATE.gold);
   el.innerHTML = html;
 }
 
-// ── Private helpers for the buy list profit rows ──────────────────────────────
+
+// ── Private helpers ────────────────────────────────────────────────────────────
 
 /**
  * Render auto-assigned profit plot rows (grouped by crop name).
- * Returns HTML string only — does not modify runningTotalCost (caller does).
+ * Returns HTML string only.
  */
 function _renderAutoProfitRows(allViableCrops, incInstances, plotAssignments, reservedSlots) {
-  // Group instances by their assigned crop name
   const seedsByCrop = {};
   incInstances.forEach((inst, idx) => {
     if (reservedSlots.has(idx)) return;
     const crop = plotAssignments[idx];
     if (!crop) return;
     const fertKey = inst.plot.boost || "none";
-    const seeds = calcSeedsNeeded(crop, inst.usableTiles, fertKey, STATE.season, STATE.day);
+    const seeds = calcSeedsNeeded(crop, inst.usableTiles, fertKey);
     if (!seedsByCrop[crop.name]) seedsByCrop[crop.name] = { crop, instances: [], totalSeeds: 0, totalCost: 0 };
     seedsByCrop[crop.name].instances.push(inst);
     seedsByCrop[crop.name].totalSeeds += seeds;
@@ -577,48 +440,39 @@ function _renderAutoProfitRows(allViableCrops, incInstances, plotAssignments, re
 
   return Object.values(seedsByCrop)
     .sort((a, b) =>
-      calcEffectiveGoldPerDay(b.crop, STATE.season, STATE.day, STATE.equipment) -
-      calcEffectiveGoldPerDay(a.crop, STATE.season, STATE.day, STATE.equipment)
+      calcEffectiveGoldPerDay(b.crop) -
+      calcEffectiveGoldPerDay(a.crop)
     )
     .map(({ crop, instances: insts, totalSeeds, totalCost }) => {
       const fertKey = insts[0].plot.boost || "none";
-      const harvests = countHarvests(crop, STATE.season, STATE.day, fertKey);
-      const effectiveGpd = Math.round(calcEffectiveGoldPerDay(crop, STATE.season, STATE.day, STATE.equipment));
-      const rawGpd = Math.round(calcRawGoldPerDay(crop, STATE.season, STATE.day, "none"));
+      const harvests = countHarvests(crop, fertKey);
+      const effectiveGpd = Math.round(calcEffectiveGoldPerDay(crop));
+      const rawGpd = Math.round(calcRawGoldPerDay(crop));
       const artisanBadge = effectiveGpd > rawGpd
-        ? `<span class="badge bg-purple" style="margin-left:3px">→ artisan ~${effectiveGpd}g/day</span>` : "";
-      const regrowBadge = crop.re ? `<span class="badge bg-pink" style="margin-left:3px">buy once</span>` : "";
+        ? tplBadge(`→ artisan ~${effectiveGpd}g/day`, "bg-purple", "margin-left:3px") : "";
+      const regrowBadge = crop.re ? tplBadge("buy once", "bg-pink", "margin-left:3px") : "";
       const boostNote = fertKey !== "none" ? ` · ${FERTILIZER_CONFIGS[fertKey].label}` : "";
-      const canAfford = STATE.gold >= totalCost;
 
-      // Build size summary: e.g. "2× 3×3, 1× 5×5"
       const sizeCounts = {};
       insts.forEach(({ plot }) => {
         const k = `${plot.w}×${plot.h}`;
         sizeCounts[k] = (sizeCounts[k] || 0) + 1;
       });
-      const sizeLabel = Object.entries(sizeCounts).map(([k, v]) => `${v}× ${k}`).join(", ");
+      const sizeLabel = Object.entries(sizeCounts).map(([k, v]) => `(${v}) ${k}`).join(", ");
       const plotCountNote = insts.length > 1
-        ? ` <span style="font-size:10px;color:var(--txt3)">(${insts.length} plots)</span>` : "";
+        ? ` <span class="plot-count-note">(${insts.length} plots)</span>` : "";
 
-      return `<div class="bi">
-        <div style="flex:1">
-          <div style="font-weight:700">${crop.name}${artisanBadge}${regrowBadge}${plotCountNote}</div>
-          <div style="color:var(--txt2);font-size:12px">${sizeLabel}${boostNote}</div>
-          <div style="font-size:11px;color:var(--txt3)">
-            ${harvests} harvest${harvests !== 1 ? "s" : ""} · ${rawGpd}g/day raw
-            ${crop.note ? ` · ${crop.note.split(".")[0]}` : ""}
-          </div>
-        </div>
-        <div style="text-align:right;white-space:nowrap">
-          <div style="font-size:13px;font-weight:700">${totalSeeds} seeds</div>
-          <div style="font-size:12px;color:${canAfford ? "#27500A" : "#A32D2D"}">${totalCost.toLocaleString()}g${canAfford ? " ✓" : ""}</div>
-        </div>
-      </div>`;
+      return tplBuyItem({
+        titleHtml: `${crop.name}${artisanBadge}${regrowBadge}${plotCountNote}`,
+        subtitleHtml: `${sizeLabel}${boostNote}`,
+        noteLine: `${harvests} harvest${harvests !== 1 ? "s" : ""} · ${rawGpd}g/day raw${crop.note ? ` · ${crop.note.split(".")[0]}` : ""}`,
+        seedCount: totalSeeds,
+        cost: totalCost,
+        canAfford: STATE.gold >= totalCost,
+      });
     }).join("");
 }
 
-/** Sum total cost of auto-assigned profit crops (for grand total). */
 function _calcAutoProfitCost(incInstances, plotAssignments, reservedSlots) {
   let total = 0;
   incInstances.forEach((inst, idx) => {
@@ -626,41 +480,36 @@ function _calcAutoProfitCost(incInstances, plotAssignments, reservedSlots) {
     const crop = plotAssignments[idx];
     if (!crop) return;
     const fertKey = inst.plot.boost || "none";
-    const seeds = calcSeedsNeeded(crop, inst.usableTiles, fertKey, STATE.season, STATE.day);
-    total += seeds * crop.cost;
+    total += calcSeedsNeeded(crop, inst.usableTiles, fertKey) * crop.cost;
   });
   return total;
 }
 
 /**
- * Render manual assignment profit rows (crop-centric with +/- controls per plot def).
- * Returns HTML string.
+ * Render manual assignment profit rows.
+ * Returns { html, cost } so the caller can accumulate the running total.
  */
 function _renderManualIncomeProfitRows(allViableCrops, incInstances, reservedSlots) {
   const profitCrops = filterIncomePlotCrops(allViableCrops, STATE.equipment)
     .filter(c => !c.flower && !UTILITY_CROP_NAMES.includes(c.name))
     .sort((a, b) =>
-      calcEffectiveGoldPerDay(b, STATE.season, STATE.day, STATE.equipment) -
-      calcEffectiveGoldPerDay(a, STATE.season, STATE.day, STATE.equipment)
+      calcEffectiveGoldPerDay(b) -
+      calcEffectiveGoldPerDay(a)
     );
 
   const { total: defTotal, available: defAvailable } = calcManualSlotAvailability(reservedSlots, incInstances);
   const manualAssignments = STATE.incomeAssignments || {};
 
-  // Unassigned plot count warning
   const totalAssignedCount = Object.values(manualAssignments)
     .reduce((sum, defMap) => sum + Object.values(defMap).reduce((s, v) => s + v, 0), 0);
   const totalProfitSlots = incInstances.filter((_, i) => !reservedSlots.has(i)).length;
   const unassignedCount = totalProfitSlots - totalAssignedCount;
 
   let html = "";
-  if (unassignedCount > 0) {
-    html += `<div style="font-size:11px;color:var(--amber);padding:3px 0 5px">
-      ⚠ ${unassignedCount} plot${unassignedCount !== 1 ? "s" : ""} unassigned — will be left empty.
-    </div>`;
-  }
+  let cost = 0;
 
-  // Plot definitions available for profit assignment (non-reserved)
+  if (unassignedCount > 0) html += tplUnassignedWarning(unassignedCount);
+
   const profitPlotDefs = getIncomePlots()
     .map((plot, defIdx) => ({ plot, defIdx }))
     .filter(({ defIdx }) => defTotal[defIdx] > 0);
@@ -668,96 +517,52 @@ function _renderManualIncomeProfitRows(allViableCrops, incInstances, reservedSlo
   profitCrops.forEach(crop => {
     const cropAssignment = manualAssignments[crop.name] || {};
     const totalAssignedForCrop = Object.values(cropAssignment).reduce((s, v) => s + v, 0);
-
-    // Skip crops with no assignments and no available slots to assign
     const hasAvailableSlots = profitPlotDefs.some(({ defIdx }) => defAvailable[defIdx] > 0);
     if (totalAssignedForCrop === 0 && !hasAvailableSlots) return;
 
-    let seedsNeeded = 0, cropCost = 0;
+    let seedsNeeded = 0;
+    let cropCost = 0;
     profitPlotDefs.forEach(({ plot, defIdx }) => {
       const cnt = cropAssignment[defIdx] || 0;
       if (!cnt) return;
       const fertKey = plot.boost || "none";
       const tilesPerInst = calcUsableTiles({ ...plot, count: 1 });
-      const seedsPerInst = calcSeedsNeeded(crop, tilesPerInst, fertKey, STATE.season, STATE.day);
+      const seedsPerInst = calcSeedsNeeded(crop, tilesPerInst, fertKey);
       seedsNeeded += seedsPerInst * cnt;
       cropCost += seedsPerInst * cnt * crop.cost;
     });
+    cost += cropCost;
 
-    const effectiveGpd = Math.round(calcEffectiveGoldPerDay(crop, STATE.season, STATE.day, STATE.equipment));
-    const rawGpd = Math.round(calcRawGoldPerDay(crop, STATE.season, STATE.day, "none"));
+    const effectiveGpd = Math.round(calcEffectiveGoldPerDay(crop));
+    const rawGpd = Math.round(calcRawGoldPerDay(crop));
     const artisanBadge = effectiveGpd > rawGpd
-      ? `<span class="badge bg-purple" style="margin-left:3px">→ artisan ~${effectiveGpd}g/day</span>` : "";
-    const regrowBadge = crop.re ? `<span class="badge bg-pink" style="margin-left:3px">buy once</span>` : "";
+      ? tplBadge(`→ artisan ~${effectiveGpd}g/day`, "bg-purple", "margin-left:3px") : "";
+    const regrowBadge = crop.re ? tplBadge("buy once", "bg-pink", "margin-left:3px") : "";
+    const harvests = countHarvests(crop, "none");
 
-    // Per-def +/- controls
     const plotControlsHtml = profitPlotDefs.map(({ plot, defIdx }) => {
-      const assignedCount = cropAssignment[defIdx] || 0;
-      const availableCount = defAvailable[defIdx] || 0;
-      const canAdd = availableCount > 0;
-      const canRemove = assignedCount > 0;
-      return `<div style="display:flex;align-items:center;gap:5px;padding:2px 0">
-        <span style="font-size:11px;color:var(--txt2);flex:1">
-          ${plot.name} (${plot.w}×${plot.h})
-          <span style="color:var(--txt3)">${assignedCount}/${defTotal[defIdx] || 0}</span>
-        </span>
-        <button onclick="adjustIncomeAssignment('${crop.name}', '${defIdx}', -1, window.__lastCrops || [])"
-          style="width:20px;height:20px;border-radius:4px;border:.5px solid var(--bd2);background:var(--bg);font-size:13px;line-height:1;cursor:pointer;color:${canRemove ? "var(--txt)" : "var(--bd2)"}"
-          ${canRemove ? "" : "disabled"}>−</button>
-        <button onclick="adjustIncomeAssignment('${crop.name}', '${defIdx}', 1, window.__lastCrops || [])"
-          style="width:20px;height:20px;border-radius:4px;border:.5px solid var(--bd2);background:var(--bg);font-size:13px;line-height:1;cursor:pointer;color:${canAdd ? "var(--txt)" : "var(--bd2)"}"
-          ${canAdd ? "" : "disabled"}>+</button>
-      </div>`;
+      const assigned = cropAssignment[defIdx] || 0;
+      const available = defAvailable[defIdx] || 0;
+      return tplManualControl({
+        plotName: plot.name, w: plot.w, h: plot.h,
+        assigned, total: defTotal[defIdx] || 0,
+        cropName: crop.name, defIdx,
+        canAdd: available > 0,
+        canRemove: assigned > 0,
+      });
     }).join("");
 
-    const isHighlighted = totalAssignedForCrop > 0;
-    const harvests = countHarvests(crop, STATE.season, STATE.day, "none");
-
-    const tileCost = seedsNeeded * crop.cost;
-    const canAfford = STATE.gold >= tileCost;
-
-    html += `<div class="bi" style="${isHighlighted ? "background:#F0F7FF;border-radius:6px;padding:5px 8px;" : ""}">
-      <div style="flex:1">
-        <div style="font-weight:700">
-          ${crop.name}${artisanBadge}${regrowBadge}
-          <span style="font-size:10px;font-weight:400;color:var(--txt3)">
-            ${rawGpd}g/day raw · ${harvests} harvest${harvests !== 1 ? "s" : ""}
-          </span>
-        </div>
-        <div style="margin-top:3px">${plotControlsHtml}</div>
-      </div>
-      <div style="text-align:right;white-space:nowrap;padding-left:8px;min-width:80px">
-        <div style="font-size:13px;font-weight:700">${seedsNeeded} seeds</div>
-        <div style="font-size:12px;color:${canAfford ? "#27500A" : "#A32D2D"}">${cropCost.toLocaleString()}g${canAfford ? " ✓" : ""}</div>
-      </div>
-    </div>`;
-  });
-
-  return html;
-}
-
-/** Sum total cost from manual assignments (for grand total). */
-function _calcManualProfitCost(allViableCrops, incInstances, reservedSlots) {
-  const profitCrops = filterIncomePlotCrops(allViableCrops, STATE.equipment)
-    .filter(c => !c.flower && !UTILITY_CROP_NAMES.includes(c.name));
-  const manualAssignments = STATE.incomeAssignments || {};
-  const profitPlotDefs = getIncomePlots().map((plot, defIdx) => ({ plot, defIdx }));
-
-  let total = 0;
-  Object.entries(manualAssignments).forEach(([cropName, defMap]) => {
-    const crop = profitCrops.find(c => c.name === cropName);
-    if (!crop) return;
-    Object.entries(defMap).forEach(([dk, count]) => {
-      const defIdx = Number(dk);
-      const plotDef = profitPlotDefs[defIdx];
-      if (!plotDef) return;
-      const fertKey = plotDef.plot.boost || "none";
-      const tilesPerInst = calcUsableTiles({ ...plotDef.plot, count: 1 });
-      const seedsPerInst = calcSeedsNeeded(crop, tilesPerInst, fertKey, STATE.season, STATE.day);
-      total += seedsPerInst * count * crop.cost;
+    html += tplBuyItem({
+      titleHtml: `${crop.name}${artisanBadge}${regrowBadge} <span class="meta-line">${rawGpd}g/day raw · ${harvests} harvest${harvests !== 1 ? "s" : ""}</span>`,
+      extraLeft: `<div style="margin-top:3px">${plotControlsHtml}</div>`,
+      seedCount: seedsNeeded,
+      cost: cropCost,
+      canAfford: STATE.gold >= cropCost,
+      highlight: totalAssignedForCrop > 0,
     });
   });
-  return total;
+
+  return { html, cost };
 }
 
 
@@ -774,23 +579,17 @@ function renderSchedule(allViableCrops) {
   const el = document.getElementById("schedule");
 
   if (STATE.season === "Winter") {
-    el.innerHTML = `<div style="color:var(--txt2);font-size:12px;line-height:1.7">
-      No outdoor crops in winter.<br>
-      • Tend greenhouse &amp; fruit trees<br>
-      • Process artisan goods<br>
-      • Forage with hoe (Snow Yam, Winter Root)<br>
-      • Build animal friendship
-    </div>`;
+    el.innerHTML = tplWinterSchedule();
     return;
   }
 
   const events = _generateScheduleEvents(allViableCrops);
   if (!events.length) {
-    el.innerHTML = `<div style="color:var(--txt3)">Add plots above and save to generate your schedule.</div>`;
+    el.innerHTML = tplEmpty("Add plots above and save to generate your schedule.");
     return;
   }
 
-  // Merge events with same (day, crop, type) — collect plot names
+  // Merge events with same (day, crop, type)
   const eventsByDay = {};
   events.forEach(event => {
     if (!eventsByDay[event.day]) eventsByDay[event.day] = [];
@@ -809,39 +608,30 @@ function renderSchedule(allViableCrops) {
 
   const eventTypeIcons = { plant: "🌱", replant: "🔄", switch: "🔀", harvest: "🌾", festival: "📅" };
   const eventTypeLabels = { plant: "Plant", replant: "Replant", switch: "Switch crop →", harvest: "Harvest", festival: "Event" };
-  const eventTypeColors = { plant: "", replant: "", switch: "color:#633806;", harvest: "color:#27500A;", festival: "color:#534AB7;" };
+  const eventTypeClasses = { plant: "sevt-plant", replant: "sevt-replant", switch: "sevt-switch", harvest: "sevt-harvest", festival: "sevt-festival" };
 
   let html = "";
   Object.keys(eventsByDay)
     .sort((a, b) => +a - +b)
     .forEach(day => {
-      const isPast = +day < STATE.day;
-      const isToday = +day === STATE.day;
-      html += `<div class="sday"${isPast ? ` style="opacity:.35"` : ""}>
-        <div class="sday-lbl">Day ${day}${isToday ? " ← today" : isPast ? " (past)" : ""}</div>`;
-
-      html += eventsByDay[day].map(event => {
-        const isFestival = event.type === "festival";
-
-        // Count how many times each plot name appears (e.g. 3× "3×3 plots")
+      const eventsHtml = eventsByDay[day].map(event => {
         const plotCounts = {};
         event.plots.forEach(p => { plotCounts[p] = (plotCounts[p] || 0) + 1; });
         const plotsLabel = event.plots.length
-          ? ` <span style="color:var(--txt2);font-size:11px">— ${Object.entries(plotCounts).map(([p, n]) => `(${n}) ${p}`).join(", ")}</span>`
-          : "";
+          ? `— ${Object.entries(plotCounts).map(([p, n]) => `(${n}) ${p}`).join(", ")}` : "";
 
-        return `<div class="sevt">
-          <span class="sevt-icon">${event.icon || eventTypeIcons[event.type] || "📋"}</span>
-          <div${isFestival ? ` style="background:#F3F0FA;border-radius:4px;padding:2px 6px"` : ""}>
-            <strong style="${eventTypeColors[event.type] || ""}">
-              ${eventTypeLabels[event.type] || event.type} ${event.crop}
-            </strong>${plotsLabel}
-            ${event.note ? `<div style="font-size:11px;color:var(--txt3)">${event.note}</div>` : ""}
-          </div>
-        </div>`;
+        return tplScheduleEvent({
+          icon: event.icon || eventTypeIcons[event.type] || "📋",
+          typeLabel: eventTypeLabels[event.type] || event.type,
+          typeClass: eventTypeClasses[event.type] || "",
+          cropName: event.crop,
+          plotsLabel,
+          note: event.note || "",
+          isFestival: event.type === "festival",
+        });
       }).join("");
 
-      html += "</div>";
+      html += tplScheduleDay(+day, STATE.day, eventsHtml);
     });
 
   el.innerHTML = html;
@@ -884,7 +674,7 @@ function _generateScheduleEvents(allViableCrops) {
     });
   }
 
-  // ── Income plot (profit + flower) events — auto or manual mode
+  // ── Income plot events
   const scheduledInstances = STATE.incomeManual
     ? expandManualAssignments(reservedSlots, incInstances, allViableCrops)
     : incInstances.map((inst, idx) => ({
@@ -900,7 +690,6 @@ function _generateScheduleEvents(allViableCrops) {
     const isMultiSeason = assignedCrop.seasons.length > 1;
 
     if (assignedCrop.re) {
-      // Regrow crop: single plant event
       if (STATE.day + adjustedGrow <= seasonEnd) {
         events.push({
           day: STATE.day, crop: assignedCrop.name, plot: plot.name, type: "plant",
@@ -908,7 +697,6 @@ function _generateScheduleEvents(allViableCrops) {
         });
       }
     } else {
-      // Single-harvest: plant, then replant after each harvest
       let currentDay = STATE.day;
       let isFirstPlanting = true;
       let lastHarvestDay = null;
@@ -916,7 +704,6 @@ function _generateScheduleEvents(allViableCrops) {
       while (true) {
         if (currentDay > seasonEnd) break;
         if (!isMultiSeason && currentDay + adjustedGrow > seasonEnd) break;
-
         const harvestDay = currentDay + adjustedGrow;
         events.push({
           day: currentDay, crop: assignedCrop.name, plot: plot.name,
@@ -928,11 +715,10 @@ function _generateScheduleEvents(allViableCrops) {
         isFirstPlanting = false;
       }
 
-      // After final harvest, suggest switching to a faster crop if time permits
       if (lastHarvestDay && lastHarvestDay < seasonEnd) {
         const remainingDays = seasonEnd - lastHarvestDay;
         const switchCandidate = incomeCrops
-          .filter(c => c.name !== assignedCrop.name && cropEquipmentRequirementMet(c, STATE.equipment))
+          .filter(c => c.name !== assignedCrop.name && cropEquipmentRequirementMet(c))
           .find(c => {
             const switchGrow = applyFertilizerToGrowTime(c.grow, fertKey);
             return remainingDays >= switchGrow;
@@ -952,7 +738,6 @@ function _generateScheduleEvents(allViableCrops) {
             type: "switch", note: switchLabel,
           });
 
-          // Add replant events for the switch crop
           if (!switchCandidate.re) {
             let switchDay = lastHarvestDay + switchGrow;
             while (switchDay + switchGrow <= seasonEnd) {
@@ -971,7 +756,6 @@ function _generateScheduleEvents(allViableCrops) {
   // ── Giant plot events
   getGiantPlots().forEach(plot => {
     const fertKey = plot.boost || "none";
-
     if (giantPlan.mode === "giant" && giantPlan.giantCrop) {
       const gc = giantPlan.giantCrop;
       const adjustedGrow = applyFertilizerToGrowTime(gc.grow, fertKey);
@@ -982,28 +766,7 @@ function _generateScheduleEvents(allViableCrops) {
         });
       }
     } else if (giantPlan.fillCrop) {
-      const fc = giantPlan.fillCrop;
-      const adjustedGrow = applyFertilizerToGrowTime(fc.grow, fertKey);
-      if (fc.re) {
-        if (STATE.day + adjustedGrow <= seasonEnd) {
-          events.push({
-            day: STATE.day, crop: fc.name, plot: plot.name, type: "plant",
-            note: `Fallback — regrows every ${fc.regrow}d`,
-          });
-        }
-      } else {
-        let day = STATE.day;
-        let first = true;
-        while (day + adjustedGrow <= seasonEnd) {
-          events.push({
-            day, crop: fc.name, plot: plot.name,
-            type: first ? "plant" : "replant",
-            note: `Fallback — harvest day ${day + adjustedGrow}`,
-          });
-          day += adjustedGrow;
-          first = false;
-        }
-      }
+      _emitSingleCropEvents(events, giantPlan.fillCrop, plot.name, "none", "Fallback");
     }
   });
 
@@ -1014,43 +777,19 @@ function _generateScheduleEvents(allViableCrops) {
     const { feedPlan, fillTiles, fillCrop, allSupplyCrops, varietyCrops } = supplyPlan;
     const incomeFallback = filterIncomePlotCrops(allViableCrops, STATE.equipment)[0];
 
-    function emitCropEvents(crop, plotName, label) {
-      const adjustedGrow = applyFertilizerToGrowTime(crop.grow, fertKey);
-      if (crop.re) {
-        if (STATE.day + adjustedGrow <= seasonEnd) {
-          events.push({
-            day: STATE.day, crop: crop.name, plot: plotName, type: "plant",
-            note: `${label} — regrows every ${crop.regrow || "?"}d`,
-          });
-        }
-      } else {
-        let day = STATE.day;
-        let first = true;
-        while (day + adjustedGrow <= seasonEnd) {
-          events.push({
-            day, crop: crop.name, plot: plotName,
-            type: first ? "plant" : "replant",
-            note: `${label} — harvest day ${day + adjustedGrow}`,
-          });
-          day += adjustedGrow;
-          first = false;
-        }
-      }
-    }
-
     if (!allSupplyCrops.length) {
-      if (incomeFallback) emitCropEvents(incomeFallback, plot.name, "Supply fallback");
+      if (incomeFallback) _emitSingleCropEvents(events, incomeFallback, plot.name, fertKey, "Supply fallback");
       return;
     }
 
     if (isFeedMode) {
-      feedPlan.forEach(({ crop }) => emitCropEvents(crop, plot.name, "Hay crop · Mill for animal feed"));
+      feedPlan.forEach(({ crop }) => _emitSingleCropEvents(events, crop, plot.name, fertKey, "Hay crop · Mill for animal feed"));
       if (fillTiles > 0 && fillCrop && fillCrop.name !== feedPlan[0]?.crop?.name) {
-        emitCropEvents(fillCrop, plot.name, "Supply variety");
+        _emitSingleCropEvents(events, fillCrop, plot.name, fertKey, "Supply variety");
       }
     } else {
       const list = varietyCrops.length ? varietyCrops : allSupplyCrops;
-      list.forEach(vc => emitCropEvents(vc, plot.name, "Variety supply"));
+      list.forEach(vc => _emitSingleCropEvents(events, vc, plot.name, fertKey, "Variety supply"));
     }
   });
 
@@ -1069,6 +808,35 @@ function _generateScheduleEvents(allViableCrops) {
   return events;
 }
 
+/**
+ * Emit plant/replant schedule events for a non-giant, non-regrow or regrow crop.
+ * Extracted from _generateScheduleEvents to reduce repetition.
+ */
+function _emitSingleCropEvents(events, crop, plotName, fertKey, label) {
+  const seasonEnd = 28;
+  const adjustedGrow = applyFertilizerToGrowTime(crop.grow, fertKey);
+  if (crop.re) {
+    if (STATE.day + adjustedGrow <= seasonEnd) {
+      events.push({
+        day: STATE.day, crop: crop.name, plot: plotName, type: "plant",
+        note: `${label} — regrows every ${crop.regrow || "?"}d`,
+      });
+    }
+  } else {
+    let day = STATE.day;
+    let first = true;
+    while (day + adjustedGrow <= seasonEnd) {
+      events.push({
+        day, crop: crop.name, plot: plotName,
+        type: first ? "plant" : "replant",
+        note: `${label} — harvest day ${day + adjustedGrow}`,
+      });
+      day += adjustedGrow;
+      first = false;
+    }
+  }
+}
+
 
 // ─── FORAGE ───────────────────────────────────────────────────────────────────
 
@@ -1083,46 +851,37 @@ function renderForage() {
   const el = document.getElementById("forage-content");
 
   if (!items.length) {
-    el.innerHTML = `<div style="color:var(--txt3)">No forage this season.</div>`;
+    el.innerHTML = tplEmpty("No forage this season.");
     return;
   }
 
   let prefixHtml = "";
   if (STATE.season === "Winter") {
-    prefixHtml = `<div class="tip-box" style="margin-bottom:10px">
-      <strong>Winter is forage season.</strong> No outdoor crops — bring a hoe for Snow Yam and Winter Root.
-      Crystal Fruit is rare but very valuable. Process with Keg or Preserves Jar for best returns.
-    </div>`;
+    prefixHtml = tplTipBox(
+      `<strong class="forage-winter-tip">Winter is forage season.</strong> No outdoor crops — bring a hoe for Snow Yam and Winter Root.
+      Crystal Fruit is rare but very valuable. Process with Keg or Preserves Jar for best returns.`
+    );
   }
 
-  const gridHtml = items.map(item => {
-    const artisanBadge = (item.artisan && ownsEquipment(item.artisan))
-      ? `<span class="badge bg-purple" style="font-size:9px;margin-left:3px">${item.artisan}</span>` : "";
-    const specialWarning = item.special
-      ? `<div style="font-size:10px;color:#633806;font-weight:600;margin-top:2px">⚠ ${item.special}</div>` : "";
-    return `<div class="fcrd">
-      <div class="fcrd-name">${item.name}${artisanBadge}</div>
-      <div class="fcrd-sell">${item.sell}g raw</div>
-      <div class="fcrd-note">${item.note}</div>
-      ${specialWarning}
-    </div>`;
-  }).join("");
+  const gridHtml = items.map(item =>
+    tplForageCard(item, ownsEquipment(item.artisan))
+  ).join("");
 
   el.innerHTML = prefixHtml + `<div class="forage-grid">${gridHtml}</div>`;
 }
 
 
-// ─── RENDER ALL (SEASONAL TAB) ────────────────────────────────────────────────
+// ─── RENDER ALL ───────────────────────────────────────────────────────────────
 
 /**
  * Re-render everything in the Seasonal Farm tab.
  * Also stores the crop list on window.__lastCrops so inline onclick
  * toggle buttons (which can't use closures) can access the current crop set.
  */
-function renderAll() {
+function renderAllSeasonal() {
   updateStatusBanner();
   const viableCrops = buildViableCropList(STATE.season, STATE.day, STATE.equipment);
-  window.__lastCrops = viableCrops; // exposed for toggle button onclick handlers
+  window.__lastCrops = viableCrops;
   renderCropTable(viableCrops);
   renderBuyList(viableCrops);
   renderSchedule(viableCrops);

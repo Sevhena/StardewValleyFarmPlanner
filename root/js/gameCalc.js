@@ -43,7 +43,7 @@ function applyFertilizerToGrowTime(baseGrowDays, fertilizerKey = "none") {
  * @param {number} currentDay — current game day (1–28)
  * @returns {number} total days available for this crop
  */
-function getDaysAvailableForCrop(crop, season, currentDay) {
+function getDaysAvailableForCrop(crop, season = STATE.season, currentDay = STATE.day) {
   const daysLeftThisSeason = 28 - currentDay + 1;
   if (crop.seasons.length === 1) return daysLeftThisSeason;
 
@@ -70,8 +70,8 @@ function getDaysAvailableForCrop(crop, season, currentDay) {
  * @param {string} fertilizerKey — fertilizer tier key
  * @returns {number} number of harvests (0 if the crop can't complete even one cycle)
  */
-function countHarvests(crop, season, currentDay, fertilizerKey = "none") {
-  const totalDays   = getDaysAvailableForCrop(crop, season, currentDay);
+function countHarvests(crop, fertilizerKey = "none", season = STATE.season, currentDay = STATE.day) {
+  const totalDays = getDaysAvailableForCrop(crop, season, currentDay);
   const adjustedGrow = applyFertilizerToGrowTime(crop.grow, fertilizerKey);
 
   if (!crop.re) {
@@ -90,20 +90,22 @@ function countHarvests(crop, season, currentDay, fertilizerKey = "none") {
  * Accounts for seed costs, harvest count, items per harvest, and grow time.
  *
  * @param {object} crop          — crop data object
+ * @param {string} fertilizerKey — fertilizer tier key
  * @param {string} season        — current season name
  * @param {number} currentDay    — current game day (1–28)
- * @param {string} fertilizerKey — fertilizer tier key
  * @returns {number} gold per day (0 if no harvests possible)
  */
-function calcRawGoldPerDay(crop, season, currentDay, fertilizerKey = "none") {
-  const totalDays    = getDaysAvailableForCrop(crop, season, currentDay);
-  const harvests     = countHarvests(crop, season, currentDay, fertilizerKey);
+function calcRawGoldPerDay(crop, fertilizerKey = "none", season = STATE.season, currentDay = STATE.day) {
+  console.log("Calculating raw gold/day for crop:", crop.name, "with fertilizer:", fertilizerKey);
+  console.log("Season:", season, "Current day:", currentDay);
+  const totalDays = getDaysAvailableForCrop(crop, season, currentDay);
+  const harvests = countHarvests(crop, fertilizerKey, season, currentDay);
   if (!harvests || !totalDays) return 0;
 
   const itemsPerHarvest = crop.perH || 1;
   // Regrow crops: only one seed purchase. Single-harvest: buy seeds each cycle.
   const totalSeedCost = crop.re ? crop.cost : harvests * crop.cost;
-  const totalRevenue  = harvests * itemsPerHarvest * crop.sell;
+  const totalRevenue = harvests * itemsPerHarvest * crop.sell;
 
   return (totalRevenue - totalSeedCost) / totalDays;
 }
@@ -119,26 +121,26 @@ function calcRawGoldPerDay(crop, season, currentDay, fertilizerKey = "none") {
  * @param {string[]} ownedEquipment — list of owned equipment names
  * @returns {number} effective (artisan-boosted if applicable) gold per day
  */
-function calcEffectiveGoldPerDay(crop, season, currentDay, ownedEquipment) {
+function calcEffectiveGoldPerDay(crop, fertilizerKey = "none", season = STATE.season, currentDay = STATE.day, ownedEquipment = STATE.equipment || []) {
   const isFruit = FRUIT_CROP_NAMES.has(crop.name);
 
   if (ownedEquipment.includes("Keg") && isFruit) {
-    const wineValue  = crop.sell * 3;
-    const harvests   = Math.max(1, countHarvests(crop, season, currentDay, "none"));
-    const totalDays  = Math.max(1, getDaysAvailableForCrop(crop, season, currentDay));
-    const seedCost   = crop.re ? crop.cost : harvests * crop.cost;
+    const wineValue = crop.sell * 3;
+    const harvests = Math.max(1, countHarvests(crop, fertilizerKey, season, currentDay));
+    const totalDays = Math.max(1, getDaysAvailableForCrop(crop, season, currentDay));
+    const seedCost = crop.re ? crop.cost : harvests * crop.cost;
     return ((harvests * (crop.perH || 1) * wineValue) - seedCost) / totalDays;
   }
 
   if (ownedEquipment.includes("Preserves Jar") && !isFruit) {
     const pickledValue = crop.sell * 2 + 50;
-    const harvests     = Math.max(1, countHarvests(crop, season, currentDay, "none"));
-    const totalDays    = Math.max(1, getDaysAvailableForCrop(crop, season, currentDay));
-    const seedCost     = crop.re ? crop.cost : harvests * crop.cost;
+    const harvests = Math.max(1, countHarvests(crop, fertilizerKey, season, currentDay));
+    const totalDays = Math.max(1, getDaysAvailableForCrop(crop, season, currentDay));
+    const seedCost = crop.re ? crop.cost : harvests * crop.cost;
     return ((harvests * (crop.perH || 1) * pickledValue) - seedCost) / totalDays;
   }
 
-  return calcRawGoldPerDay(crop, season, currentDay, "none");
+  return calcRawGoldPerDay(crop, fertilizerKey, season, currentDay);
 }
 
 /**
@@ -170,9 +172,9 @@ function calcLastPlantableDay(crop, currentDay) {
  * @param {number} currentDay    — current game day (1–28)
  * @returns {number} total seeds to buy
  */
-function calcSeedsNeeded(crop, tiles, fertilizerKey, season, currentDay) {
+function calcSeedsNeeded(crop, tiles, fertilizerKey, season = STATE.season, currentDay = STATE.day) {
   if (crop.re) return tiles; // One purchase covers all regrow harvests
-  return tiles * Math.max(1, countHarvests(crop, season, currentDay, fertilizerKey));
+  return tiles * Math.max(1, countHarvests(crop, fertilizerKey, season, currentDay));
 }
 
 
@@ -199,7 +201,41 @@ function calcUsableTiles(plot) {
  * @returns {number} number of 3×3 blocks across all instances
  */
 function calcGiantCropBlocks(plot) {
-  return Math.floor(plot.w / 3) * Math.floor(plot.h / 3) * plot.count;
+  console.log("calcGiantCropBlocks called with plot:", plot);
+  const sprinkler = plot.sprinkler || undefined;
+  console.log("sprinkler:", sprinkler);
+  if (!sprinkler || sprinkler === "none") {
+    const result = Math.floor(plot.w / 3) * Math.floor(plot.h / 3) * plot.count;
+    console.log("No sprinkler case, returning:", result);
+    return result;
+  }
+
+  const sprklRootCov = Math.floor(Math.sqrt(SPRINKLER_CONFIGS[sprinkler].tileCoverage));
+  const tilesBtwnSprkl = sprklRootCov - 1;
+  console.log("sprklRootCov:", sprklRootCov, "tilesBtwnSprkl:", tilesBtwnSprkl);
+
+  if (tilesBtwnSprkl < 3) {
+    console.log("tilesBtwnSprkl < 3, returning 0");
+    return 0; // Sprinkler coverage overlaps too much, no 3×3 blocks fit
+  }
+
+  const availableBlockSpaceAlongWidth = Math.floor(plot.w / sprklRootCov) - 1;
+  const availableBlockSpaceAlongHeight = Math.floor(plot.h / sprklRootCov) - 1;
+  console.log("availableBlockSpaceAlongWidth:", availableBlockSpaceAlongWidth, "availableBlockSpaceAlongHeight:", availableBlockSpaceAlongHeight);
+
+  if (availableBlockSpaceAlongWidth <= 0 || availableBlockSpaceAlongHeight <= 0) {
+    console.log("Not enough block space, returning 0");
+    return 0; // Not enough space for even one block after accounting for sprinkler coverage
+  }
+
+  const crossSectionBlocks = availableBlockSpaceAlongWidth * availableBlockSpaceAlongHeight;
+  const blocksAlongHeight = availableBlockSpaceAlongWidth * Math.floor(plot.h / 3);
+  const blocksAlongWidth = availableBlockSpaceAlongHeight * Math.floor(plot.w / 3);
+  console.log("crossSectionBlocks:", crossSectionBlocks, "blocksAlongHeight:", blocksAlongHeight, "blocksAlongWidth:", blocksAlongWidth);
+
+  const result = blocksAlongHeight + blocksAlongWidth - crossSectionBlocks * plot.count;
+  console.log("Final result:", result);
+  return result;
 }
 
 
@@ -240,9 +276,9 @@ function calcWinterHayNeeded(animals) {
  * @param {number} currentDay — current game day (1–28)
  * @returns {boolean}
  */
-function isCropViableThisSeason(crop, season, currentDay) {
+function isCropViableThisSeason(crop, season = STATE.season, currentDay = STATE.day) {
   return crop.seasons.includes(season) &&
-    getDaysAvailableForCrop(crop, season, currentDay) >= crop.grow;
+    getDaysAvailableForCrop(crop) >= crop.grow;
 }
 
 /**
@@ -253,7 +289,7 @@ function isCropViableThisSeason(crop, season, currentDay) {
  * @param {string[]} ownedEquipment — list of owned equipment names
  * @returns {boolean}
  */
-function cropEquipmentRequirementMet(crop, ownedEquipment) {
+function cropEquipmentRequirementMet(crop, ownedEquipment = STATE.equipment || []) {
   if (!crop.reqE) return true;
   return ownedEquipment.includes(crop.reqE);
 }
@@ -271,15 +307,15 @@ function cropEquipmentRequirementMet(crop, ownedEquipment) {
  * @param {string[]} ownedEquipment — owned equipment for equipment-check dimming
  * @returns {object[]} sorted array of crop objects with _harvests, _goldPerDay, _lastPlantDay
  */
-function buildViableCropList(season, currentDay, ownedEquipment) {
+function buildViableCropList(season = STATE.season, currentDay = STATE.day, ownedEquipment = STATE.equipment || []) {
   const seen = new Set();
   return CROPS
     .filter(crop => isCropViableThisSeason(crop, season, currentDay))
     .map(crop => ({
       ...crop,
-      _harvests:      countHarvests(crop, season, currentDay, "none"),
-      _goldPerDay:    calcRawGoldPerDay(crop, season, currentDay, "none"),
-      _lastPlantDay:  calcLastPlantableDay(crop, currentDay),
+      _harvests: countHarvests(crop, "none"),
+      _goldPerDay: calcRawGoldPerDay(crop, season, currentDay, "none"),
+      _lastPlantDay: calcLastPlantableDay(crop, currentDay),
     }))
     .sort((a, b) => b._goldPerDay - a._goldPerDay)
     .filter(crop => {
@@ -298,7 +334,7 @@ function buildViableCropList(season, currentDay, ownedEquipment) {
  * @param {string[]} ownedEquipment  — for equipment requirement check
  * @returns {object[]}
  */
-function filterIncomePlotCrops(allViableCrops, ownedEquipment) {
+function filterIncomePlotCrops(allViableCrops, ownedEquipment = STATE.equipment || []) {
   return allViableCrops.filter(crop =>
     !crop.supply &&
     !crop.giant &&

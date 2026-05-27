@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -157,17 +158,25 @@
         <div class="card-title">Farm plots</div>
         <div style="font-size:12px;color:var(--txt3);margin-bottom:9px;line-height:1.5">
           Income plots: single crop each.
-          Giant/supply plots can mix crops. Row 2 per plot sets sprinkler type (auto-calculates usable tiles) and growth fertilizer.
+          Giant/supply plots can mix crops. Row 2 per plot sets sprinkler type (auto-calculates usable tiles) and growth
+          fertilizer.
         </div>
         <!-- Column headers for the plot editor rows -->
         <div class="plot-r1">
           <span style="font-size:10px;color:var(--txt3);font-weight:700;text-transform:uppercase">Name</span>
-          <span style="font-size:10px;color:var(--txt3);font-weight:700;text-transform:uppercase;text-align:center">W</span>
-          <span style="font-size:10px;color:var(--txt3);font-weight:700;text-transform:uppercase;text-align:center">H</span>
-          <span style="font-size:10px;color:var(--txt3);font-weight:700;text-transform:uppercase;text-align:center">Qty</span>
-          <span style="font-size:10px;color:var(--txt3);font-weight:700;text-transform:uppercase;text-align:center">Type</span>
-          <span style="font-size:10px;color:var(--txt3);font-weight:700;text-transform:uppercase;text-align:center">Sprinklers</span>
-          <span style="font-size:10px;color:var(--txt3);font-weight:700;text-transform:uppercase;text-align:center">Speed Boost</span>
+          <span
+            style="font-size:10px;color:var(--txt3);font-weight:700;text-transform:uppercase;text-align:center">W</span>
+          <span
+            style="font-size:10px;color:var(--txt3);font-weight:700;text-transform:uppercase;text-align:center">H</span>
+          <span
+            style="font-size:10px;color:var(--txt3);font-weight:700;text-transform:uppercase;text-align:center">Qty</span>
+          <span
+            style="font-size:10px;color:var(--txt3);font-weight:700;text-transform:uppercase;text-align:center">Type</span>
+          <span
+            style="font-size:10px;color:var(--txt3);font-weight:700;text-transform:uppercase;text-align:center">Sprinklers</span>
+          <span
+            style="font-size:10px;color:var(--txt3);font-weight:700;text-transform:uppercase;text-align:center">Speed
+            Boost</span>
           <span></span>
         </div>
         <!-- Plot rows injected here by renderPlots() in renderSetup.js -->
@@ -322,22 +331,25 @@
   <!-- ═══════════════════════════════════════════════════════════════
        SCRIPT LOAD ORDER
        Modules must load in dependency order:
-         data.js       → raw game data constants (no dependencies)
-         gameCalc.js   → pure math helpers (depends on data.js)
-         state.js      → app state + persistence (depends on data.js)
-         plotLogic.js  → income/giant/supply assignment (depends on gameCalc, state)
-         renderSetup.js → setup bar + plot editor UI (depends on state, plotLogic)
+         data.js        → raw game data constants (no dependencies)
+         gameCalc.js    → pure math helpers (depends on data.js)
+         state.js       → app state + persistence (depends on data.js)
+         templates.js   → HTML fragment builders (depends on data.js)
+         plotLogic.js   → income/giant/supply assignment (depends on gameCalc, state)
+         renderSetup.js → setup bar + plot editor UI (depends on state, plotLogic, templates)
          renderSeasonal.js → seasonal tab rendering (depends on all above)
-         renderOther.js   → greenhouse/artisan/seedmaker tabs
-         main.js          → entry point, wires everything together
+         renderOther.js    → greenhouse/artisan/seedmaker tabs
+         main.js           → entry point, wires everything together
   ════════════════════════════════════════════════════════════════ -->
   <script src="js/data.js"></script>
   <script src="js/gameCalc.js"></script>
   <script src="js/state.js"></script>
+  <script src="js/templates.js"></script>
   <script src="js/plotLogic.js"></script>
   <script src="js/renderSetup.js"></script>
   <script src="js/renderSeasonal.js"></script>
   <script src="js/renderOther.js"></script>
   <script src="js/main.js"></script>
 </body>
+
 </html>

@@ -120,7 +120,9 @@ function getUtilityPlotRotation(incomePoolCrops, fertilizerKey) {
  * @returns {{
  *   instances:   Array<{ plot, defIdx, instanceIdx, usableTiles }>,
  *   assignments: Array<object|null>,  // parallel to instances; null = unassigned
+ *   incomeCrops: object[],            // viable income crops this season (for reference)
  *   flowerPool:  object[],
+ *   nonFlowerCrops: object[],
  *   flowerSlotIndex: number,          // instance index of the flower slot (-1 if none)
  *   utilitySlotIndex: number,         // instance index of the utility slot (-1 if none)
  * }}
@@ -128,15 +130,15 @@ function getUtilityPlotRotation(incomePoolCrops, fertilizerKey) {
 function assignIncomePlots(allViableCrops) {
   const instances = expandIncomePlotInstances();
   if (!instances.length) {
-    return { instances: [], assignments: [], flowerPool: [], flowerSlotIndex: -1, utilitySlotIndex: -1 };
+    return { instances: [], assignments: [], incomeCrops: [], flowerPool: [], nonFlowerCrops: [], flowerSlotIndex: -1, utilitySlotIndex: -1 };
   }
 
-  const incomeCrops = filterIncomePlotCrops(allViableCrops, STATE.equipment);
-  const flowerPool = incomeCrops.filter(c => c.flower && isCropViableThisSeason(c, STATE.season, STATE.day));
+  const incomeCrops = filterIncomePlotCrops(allViableCrops);
+  const flowerPool = incomeCrops.filter(c => c.flower && isCropViableThisSeason(c));
   const nonFlowerCrops = incomeCrops.filter(c => !c.flower);
 
   if (!incomeCrops.length) {
-    return { instances, assignments: instances.map(() => null), flowerPool, flowerSlotIndex: -1, utilitySlotIndex: -1 };
+    return { instances, assignments: instances.map(() => null), incomeCrops, flowerPool, nonFlowerCrops, flowerSlotIndex: -1, utilitySlotIndex: -1 };
   }
 
   // Sort instance indices by tile count ascending (smallest gets special slots)
@@ -178,9 +180,11 @@ function assignIncomePlots(allViableCrops) {
   const profitCrops = nonFlowerCrops
     .filter(c => !UTILITY_CROP_NAMES.includes(c.name))
     .sort((a, b) =>
-      calcEffectiveGoldPerDay(b, STATE.season, STATE.day, STATE.equipment) -
-      calcEffectiveGoldPerDay(a, STATE.season, STATE.day, STATE.equipment)
+      calcEffectiveGoldPerDay(b) -
+      calcEffectiveGoldPerDay(a)
     );
+
+  console.log("Profit crops:", profitCrops);
 
   const slotCount = remainingSlotIndices.length;
   const cropCount = profitCrops.length;
@@ -229,15 +233,14 @@ function assignIncomePlots(allViableCrops) {
     }
   }
 
-  console.log("Instances:", instances);
-  console.log("Plot assignments:", assignments);
-  console.log("Income plot types: ", getIncomePlots())
+  // console.log("Instances:", instances);
+  // console.log("Plot assignments:", assignments);
   if (STATE.seasonChanged) {
     syncManualToAutoAssignments(instances, assignments);
     STATE.seasonChanged = false;
   }
 
-  return { instances, assignments, flowerPool, flowerSlotIndex, utilitySlotIndex };
+  return { instances, assignments, incomeCrops, flowerPool, nonFlowerCrops, flowerSlotIndex, utilitySlotIndex };
 }
 
 function syncManualToAutoAssignments(instances, autoAssignments) {
@@ -259,7 +262,7 @@ function syncManualToAutoAssignments(instances, autoAssignments) {
     }
   }
 
-  console.log("Syncing manual assignments to auto:", manualAssignments);
+  // console.log("Syncing manual assignments to auto:", manualAssignments);
   STATE.incomeAssignments = manualAssignments;
 }
 
@@ -285,14 +288,16 @@ function syncManualToAutoAssignments(instances, autoAssignments) {
 function calcGiantPlotPlan(allViableCrops) {
   const viableGiantCrops = allViableCrops.filter(c =>
     c.giant &&
-    isCropViableThisSeason(c, STATE.season, STATE.day) &&
-    cropEquipmentRequirementMet(c, STATE.equipment)
+    isCropViableThisSeason(c) &&
+    cropEquipmentRequirementMet(c)
   );
-  const incomeCrops = filterIncomePlotCrops(allViableCrops, STATE.equipment);
+  const incomeCrops = filterIncomePlotCrops(allViableCrops);
   const giantBlocks = getTotalGiantBlocks();
   const totalGiantTiles = getTotalGiantTiles();
 
-  if (!giantBlocks || !viableGiantCrops.length) {
+  console.log("Blocks:", giantBlocks);
+
+  if (!viableGiantCrops.length) {
     // No giant blocks or no viable giant crops → use best income crop as fallback
     return {
       mode: "income",
@@ -305,7 +310,7 @@ function calcGiantPlotPlan(allViableCrops) {
   // Clamp alt index to valid range
   const selectedIdx = Math.min(STATE.giantCropAltIdx || 0, viableGiantCrops.length - 1);
   const selectedGiantCrop = viableGiantCrops[selectedIdx];
-  const leftoverTiles = totalGiantTiles - giantBlocks * 9;
+  const leftoverTiles = giantBlocks > 0 ? totalGiantTiles - giantBlocks * 9 : 0;
 
   return {
     mode: "giant",
@@ -341,8 +346,8 @@ function calcGiantPlotPlan(allViableCrops) {
 function calcSupplyPlotPlan(allViableCrops) {
   const allSupplyCrops = allViableCrops.filter(c =>
     c.supply &&
-    isCropViableThisSeason(c, STATE.season, STATE.day) &&
-    cropEquipmentRequirementMet(c, STATE.equipment)
+    isCropViableThisSeason(c) &&
+    cropEquipmentRequirementMet(c)
   );
   const hayCrops = allSupplyCrops.filter(c => c.name === "Wheat" || c.name === "Amaranth");
   const otherSupply = allSupplyCrops.filter(c => c.name !== "Wheat" && c.name !== "Amaranth");
@@ -356,13 +361,13 @@ function calcSupplyPlotPlan(allViableCrops) {
   if (hayCrops.length && winterHayNeeded > 0) {
     const fertilizerKey = firstSupplyPlot?.boost || "none";
     const viableHayCrops = hayCrops.filter(c =>
-      countHarvests(c, STATE.season, STATE.day, fertilizerKey) > 0
+      countHarvests(c, fertilizerKey) > 0
     );
 
     if (viableHayCrops.length) {
       // Estimate how many tiles we need total to cover the hay requirement
       const avgHarvestsPerTile = viableHayCrops.reduce(
-        (sum, c) => sum + countHarvests(c, STATE.season, STATE.day, fertilizerKey), 0
+        (sum, c) => sum + countHarvests(c, fertilizerKey), 0
       ) / viableHayCrops.length;
 
       const totalFeedTilesNeeded = Math.min(
@@ -533,7 +538,7 @@ function adjustIncomeAssignment(cropName, defIdx, delta, allCrops) {
 /** Cycle to the next available giant crop and re-render. */
 function toggleGiantCrop(allCrops) {
   const viableGiantCrops = allCrops.filter(c =>
-    c.giant && isCropViableThisSeason(c, STATE.season, STATE.day)
+    c.giant && isCropViableThisSeason(c)
   );
   STATE.giantCropAltIdx = ((STATE.giantCropAltIdx || 0) + 1) % Math.max(1, viableGiantCrops.length);
   saveState();
@@ -553,7 +558,7 @@ function toggleSupplyMode(allCrops) {
 function toggleFlowerCrop(allCrops) {
   const incomeCrops = filterIncomePlotCrops(allCrops, STATE.equipment);
   const flowerPool = incomeCrops.filter(c =>
-    c.flower && isCropViableThisSeason(c, STATE.season, STATE.day)
+    c.flower && isCropViableThisSeason(c)
   );
   STATE.flowerAltIdx = ((STATE.flowerAltIdx || 0) + 1) % Math.max(1, flowerPool.length);
   saveState();

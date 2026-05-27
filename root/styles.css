@@ -22,6 +22,8 @@
     18.  Greenhouse & artisan cards
     19.  Seed Maker cards
     20.  Utility components (toggle buttons, rank bar, festival box, tip box)
+    21.  Template-extracted utility classes
+         (replaces inline styles in render JS and templates.js)
 ════════════════════════════════════════════════════════════════════════ */
 
 
@@ -43,17 +45,20 @@ body {
 /* ─── 2. CSS CUSTOM PROPERTIES ───────────────────────────────────────── */
 :root {
   /* Backgrounds */
-  --bg:  #fff;
+  --bg: #fff;
   --bg2: #f5f5f5;
 
   /* Borders */
-  --bd:  #e0e0e0;
+  --bd: #e0e0e0;
   --bd2: #ccc;
 
   /* Text hierarchy */
-  --txt:  #1a1a1a;  /* primary */
-  --txt2: #555;     /* secondary */
-  --txt3: #999;     /* tertiary / labels */
+  --txt: #1a1a1a;
+  /* primary */
+  --txt2: #555;
+  /* secondary */
+  --txt3: #999;
+  /* tertiary / labels */
 
   /* Border radius */
   --r: 8px;
@@ -61,13 +66,13 @@ body {
   /* Semantic accent colours */
   --green: #27500A;
   --amber: #633806;
-  --red:   #A32D2D;
+  --red: #A32D2D;
 }
 
 
 /* ─── 3. APP SHELL & LAYOUT ──────────────────────────────────────────── */
 .app {
-  padding: .5rem 0;
+  padding: .5rem .5rem;
 }
 
 
@@ -238,10 +243,21 @@ body {
 }
 
 /* Season colour variants for the season banner card */
-.s-spring { color: #3B6D11; }
-.s-summer { color: #185FA5; }
-.s-fall   { color: #BA7517; }
-.s-winter { color: #534AB7; }
+.s-spring {
+  color: #3B6D11;
+}
+
+.s-summer {
+  color: #185FA5;
+}
+
+.s-fall {
+  color: #BA7517;
+}
+
+.s-winter {
+  color: #534AB7;
+}
 
 /* Season progress bar (sits below the banner) */
 .prog-bar {
@@ -420,6 +436,75 @@ body {
   border-bottom: none;
 }
 
+/* Dimmed row (missing equipment) */
+.row-dimmed {
+  opacity: .45;
+}
+
+/* Crop name cell */
+.crop-name {
+  font-weight: 600;
+}
+
+.crop-badges {
+  display: flex;
+  gap: 2px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.crop-src {
+  font-size: 10px;
+  color: var(--txt3);
+}
+
+/* Missing-equipment warning */
+.equip-warn {
+  font-size: 10px;
+  color: var(--red);
+}
+
+/* Secondary table cell (seasons, notes) */
+.td-sec {
+  font-size: 11px;
+  color: var(--txt2);
+}
+
+/* Rank labels in the notes column */
+.rank-best {
+  color: #BA7517;
+  font-weight: 700;
+}
+
+.rank-top3 {
+  color: var(--green);
+}
+
+/* Artisan-boosted g/day value */
+.gpd-artisan {
+  color: #27500A;
+  font-weight: 700;
+}
+
+/* Raw g/day sub-label under artisan value */
+.gpd-raw-sub {
+  font-size: 9px;
+  color: var(--txt3);
+}
+
+/* Regrow time sub-line in grow column */
+.grow-regrow {
+  font-size: 10px;
+  color: var(--txt3);
+  display: block;
+}
+
+/* Fertilizer-adjusted grow time */
+.grow-fert {
+  color: var(--green);
+  font-size: 10px;
+}
+
 
 /* ─── 13. BADGE CHIPS ────────────────────────────────────────────────── */
 /* Inline coloured label chips — bg-{colour} variants */
@@ -432,18 +517,49 @@ body {
   white-space: nowrap;
 }
 
-.bg-green  { background: #EAF3DE; color: #27500A; }
-.bg-blue   { background: #E6F1FB; color: #0C447C; }
-.bg-amber  { background: #FAEEDA; color: #633806; }
-.bg-pink   { background: #FBEAF0; color: #72243E; }
-.bg-gray   { background: #F1EFE8; color: #444;    }
-.bg-purple { background: #EEEDFE; color: #3C3489; }
-.bg-teal   { background: #E1F5EE; color: #085041; }
-.bg-coral  { background: #FAECE7; color: #712B13; }
+.bg-green {
+  background: #EAF3DE;
+  color: #27500A;
+}
+
+.bg-blue {
+  background: #E6F1FB;
+  color: #0C447C;
+}
+
+.bg-amber {
+  background: #FAEEDA;
+  color: #633806;
+}
+
+.bg-pink {
+  background: #FBEAF0;
+  color: #72243E;
+}
+
+.bg-gray {
+  background: #F1EFE8;
+  color: #444;
+}
+
+.bg-purple {
+  background: #EEEDFE;
+  color: #3C3489;
+}
+
+.bg-teal {
+  background: #E1F5EE;
+  color: #085041;
+}
+
+.bg-coral {
+  background: #FAECE7;
+  color: #712B13;
+}
 
 
 /* ─── 14. SECTION GROUP HEADERS ─────────────────────────────────────── */
-/* Bold section divider inside the shopping list (e.g. "Income plots", "Giant plots") */
+/* Bold section divider inside the shopping list */
 .bgh {
   font-size: 11px;
   font-weight: 700;
@@ -458,9 +574,30 @@ body {
   align-items: center;
 }
 
+.bgh-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Mode label inside the bgh-right area */
+.bgh-mode {
+  font-size: 10px;
+  color: var(--txt3);
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* "no time for giants" warning */
+.bgh-warn {
+  font-size: 10px;
+  color: #BA7517;
+}
+
 
 /* ─── 15. BUY LIST ITEMS ─────────────────────────────────────────────── */
-/* Single seed-purchase row in the shopping list */
+/* Single seed-purchase row */
 .bi {
   display: flex;
   justify-content: space-between;
@@ -474,7 +611,73 @@ body {
   border-bottom: none;
 }
 
-/* Total cost row at the bottom of the shopping list */
+/* Flower slot — soft lavender tint */
+.bi-flower {
+  background: #F9F6FF;
+  border-radius: 6px;
+  padding: 6px 8px;
+  margin-bottom: 2px;
+}
+
+/* Utility slot — soft green tint */
+.bi-utility {
+  background: #EAF3DE;
+  border-radius: 6px;
+  padding: 6px 8px;
+  margin-bottom: 2px;
+}
+
+/* Manual-mode highlighted (assigned) row */
+.bi-hl {
+  background: #F0F7FF;
+  border-radius: 6px;
+  padding: 5px 8px;
+}
+
+/* Left flex column */
+.bi-left {
+  flex: 1;
+}
+
+/* Right column: seeds + cost, right-aligned */
+.bi-right {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.bi-title {
+  font-weight: 700;
+}
+
+.bi-sub {
+  font-size: 12px;
+  color: var(--txt2);
+}
+
+.bi-note {
+  font-size: 11px;
+  color: var(--txt3);
+}
+
+.bi-seeds {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.bi-cost {
+  font-size: 12px;
+}
+
+/* Afford / short colour states shared across buy list */
+.afford {
+  color: #27500A;
+}
+
+.short {
+  color: #A32D2D;
+}
+
+/* Total cost row */
 .buy-total {
   display: flex;
   justify-content: space-between;
@@ -485,14 +688,117 @@ body {
   font-size: 13px;
 }
 
+.buy-total-val {
+  /* colour applied via .afford / .short */
+}
+
+/* "No supply crops" note line */
+.no-supply-note,
+.warn-banner {
+  font-size: 11px;
+  color: var(--amber);
+  padding: 3px 0 5px;
+}
+
+/* "Hay stocked" variety-mode note */
+.hay-stocked-note {
+  font-size: 11px;
+  color: var(--amber);
+  padding: 3px 0 5px;
+}
+
+/* "No hay crops available" warning */
+.no-hay-warn {
+  font-size: 11px;
+  color: var(--txt3);
+  padding: 3px 0;
+}
+
+/* "Hay covered" green note */
+.hay-ok-note {
+  font-size: 11px;
+  color: var(--green);
+  padding: 3px 0;
+}
+
+/* No income crops fallback note */
+.no-income-note {
+  font-size: 12px;
+  color: var(--txt3);
+  padding: 6px 0;
+}
+
+/* Fallback / supply-fallback label */
+.fallback-note {
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--txt3);
+}
+
+/* "Not enough days for giants" sub-note */
+.no-giant-note {
+  font-size: 12px;
+  color: var(--txt2);
+  padding: 4px 0 6px;
+}
+
+/* Winter placeholder inside buy list / schedule */
+.winter-note {
+  font-size: 12px;
+  color: var(--txt2);
+  line-height: 1.6;
+}
+
+/* No-plots placeholder */
+.empty-state {
+  color: var(--txt3);
+}
+
+/* Manual-mode +/− control row */
+.mc-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 0;
+}
+
+.mc-label {
+  font-size: 11px;
+  color: var(--txt2);
+  flex: 1;
+}
+
+.mc-count {
+  color: var(--txt3);
+}
+
+.mc-btn {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: .5px solid var(--bd2);
+  background: var(--bg);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--txt);
+}
+
+.mc-btn-dis {
+  color: var(--bd2);
+  cursor: default;
+}
+
 
 /* ─── 16. SCHEDULE DAY / EVENT ROWS ─────────────────────────────────── */
-/* Wrapper for a single day's events */
 .sday {
   margin-bottom: 9px;
 }
 
-/* Day label pill (e.g. "Day 4", "Day 13 ← today") */
+.sday-past {
+  opacity: .35;
+}
+
 .sday-lbl {
   font-size: 10px;
   font-weight: 700;
@@ -506,7 +812,6 @@ body {
   margin-bottom: 4px;
 }
 
-/* Single schedule event row (icon + text) */
 .sevt {
   display: flex;
   align-items: flex-start;
@@ -521,7 +826,43 @@ body {
   font-size: 13px;
 }
 
-/* Highlighted block for crop-switch events */
+/* Festival event row gets a light purple tint */
+.sevt-festival-row>div {
+  background: #F3F0FA;
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+/* Per-type label colours */
+.sevt-plant {}
+
+.sevt-replant {}
+
+.sevt-switch {
+  color: #ca54a5;
+}
+
+.sevt-harvest {
+  color: #27500A;
+}
+
+.sevt-festival {
+  color: #534AB7;
+}
+
+/* Plot list after the event name */
+.sevt-plots {
+  color: var(--txt2);
+  font-size: 11px;
+}
+
+/* Note line under event */
+.sevt-note {
+  font-size: 11px;
+  color: var(--txt3);
+}
+
+/* Highlighted switch block */
 .evt-switch {
   background: #FFF8EC;
   border-left: 3px solid #e8a817;
@@ -532,7 +873,6 @@ body {
 
 
 /* ─── 17. FORAGE GRID ────────────────────────────────────────────────── */
-/* 3-column grid of forage item cards */
 .forage-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -565,9 +905,15 @@ body {
   line-height: 1.4;
 }
 
+.fcrd-special {
+  font-size: 10px;
+  color: #633806;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
 
 /* ─── 18. GREENHOUSE & ARTISAN CARDS ─────────────────────────────────── */
-/* Two-column grid for greenhouse crops, artisan chains */
 .two-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -575,7 +921,6 @@ body {
   margin-bottom: 10px;
 }
 
-/* Card variant used in greenhouse + artisan panels */
 .gh-card {
   background: var(--bg);
   border: .5px solid var(--bd);
@@ -590,8 +935,8 @@ body {
   margin-bottom: 6px;
 }
 
-/* Key-value row inside a gh-card */
-.gh-row {
+/* Key-value rows used inside gh-card (via tplLabelValue) */
+.lv-row {
   display: flex;
   justify-content: space-between;
   font-size: 12px;
@@ -599,16 +944,27 @@ body {
   border-bottom: .5px solid var(--bd);
 }
 
-.gh-row:last-child {
+.lv-row:last-of-type {
   border-bottom: none;
 }
 
-.gh-lbl { color: var(--txt2); }
-.gh-val { font-weight: 600; color: var(--txt); }
+.lv-lbl {
+  color: var(--txt2);
+}
+
+.lv-val {
+  font-weight: 600;
+  color: var(--txt);
+  font-size: 11px;
+}
+
+/* Output row in artisan card gets green tint */
+.lv-output {
+  color: #27500A;
+}
 
 
 /* ─── 19. SEED MAKER CARDS ───────────────────────────────────────────── */
-/* Card wrapper for a priority tier */
 .sm-card {
   background: var(--bg);
   border: .5px solid var(--bd);
@@ -617,7 +973,21 @@ body {
   margin-bottom: 8px;
 }
 
-/* Single seed-maker recommendation row */
+.sm-card-hd {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sm-card-sub {
+  font-size: 11px;
+  color: var(--txt3);
+  font-weight: 400;
+}
+
 .sm-row {
   display: flex;
   justify-content: space-between;
@@ -632,7 +1002,35 @@ body {
   border-bottom: none;
 }
 
-/* Priority pill labels for seed maker tiers */
+.sm-row-left {
+  flex: 1;
+}
+
+.sm-row-right {
+  text-align: right;
+}
+
+.sm-row-name {
+  font-weight: 700;
+}
+
+.sm-row-reason {
+  color: var(--txt2);
+  font-size: 11px;
+}
+
+.sm-row-meta {
+  color: var(--txt3);
+  font-size: 11px;
+}
+
+.sm-row-cost {
+  font-size: 11px;
+  color: var(--txt3);
+  margin-top: 3px;
+}
+
+/* Priority pill labels */
 .ppill {
   font-size: 10px;
   padding: 1px 7px;
@@ -641,10 +1039,25 @@ body {
   white-space: nowrap;
 }
 
-.pp-urgent { background: #FAEEDA; color: #633806; }
-.pp-high   { background: #EAF3DE; color: #27500A; }
-.pp-medium { background: #E6F1FB; color: #0C447C; }
-.pp-low    { background: #F1EFE8; color: #444;    }
+.pp-urgent {
+  background: #FAEEDA;
+  color: #633806;
+}
+
+.pp-high {
+  background: #EAF3DE;
+  color: #27500A;
+}
+
+.pp-medium {
+  background: #E6F1FB;
+  color: #0C447C;
+}
+
+.pp-low {
+  background: #F1EFE8;
+  color: #444;
+}
 
 
 /* ─── 20. UTILITY COMPONENTS ─────────────────────────────────────────── */
@@ -669,14 +1082,13 @@ body {
   border-color: #C0DD97;
 }
 
-/* Alternate/active state for toggle buttons (e.g. "variety mode" active) */
 .toggle-btn.alt {
   background: #FAEEDA;
   color: #633806;
   border-color: #e8c97a;
 }
 
-/* Thin progress bar showing relative crop value in the crop table */
+/* Thin rank bar */
 .rank-bar {
   display: flex;
   height: 3px;
@@ -692,7 +1104,7 @@ body {
   background: #639922;
 }
 
-/* Warning box for upcoming festivals in the shopping list */
+/* Upcoming festival warning box */
 .festival-box {
   background: #FFF3E0;
   border: .5px solid #FFB74D;
@@ -703,7 +1115,7 @@ body {
   margin-bottom: 8px;
 }
 
-/* Advisory/tip box used at the bottom of cards */
+/* Advisory tip box */
 .tip-box {
   background: var(--bg2);
   border-radius: 6px;
@@ -712,4 +1124,115 @@ body {
   color: var(--txt2);
   line-height: 1.6;
   margin-top: 8px;
+}
+
+
+/* ─── 21. TEMPLATE-EXTRACTED UTILITY CLASSES ─────────────────────────── */
+/*
+ * These classes replace recurring inline styles that were previously
+ * scattered across renderSeasonal.js, renderOther.js, and renderSetup.js.
+ * All layout and colour decisions now live here rather than in JS strings.
+ */
+
+/* Generic meta / tertiary one-liner (replaces font-size:10px;color:var(--txt3)) */
+.meta-line {
+  font-size: 10px;
+  color: var(--txt3);
+}
+
+/* Secondary descriptive line (replaces font-size:12px;color:var(--txt2)) */
+.desc-line {
+  font-size: 12px;
+  color: var(--txt2);
+}
+
+/* Artisan badge inline in buy list crop name (replaces purple badge with margin) */
+.badge-artisan {
+  margin-left: 3px;
+}
+
+/* "buy once" regrow badge */
+.badge-regrow {
+  margin-left: 3px;
+}
+
+/* Plot count note beside crop name in auto profit rows */
+.plot-count-note {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--txt3);
+}
+
+/* Utility plot rotation label (replaces font-size:11px;color:var(--txt3);line-height:1.6) */
+.util-rotation-label {
+  font-size: 11px;
+  color: var(--txt3);
+  line-height: 1.6;
+}
+
+/* Per-item detail line inside utility block */
+.util-detail-line {
+  font-size: 11px;
+  color: var(--txt3);
+}
+
+/* Giant block sub-note */
+.giant-subnote {
+  font-size: 11px;
+  color: var(--txt3);
+}
+
+/* "Fill tiles" label suffix */
+.fill-note {
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--txt3);
+}
+
+/* Supply feed crop sub-line */
+.feed-sublabel {
+  font-size: 12px;
+  color: var(--txt2);
+}
+
+/* Small cost-per-harvest detail line (replaces font-size:11px;color:var(--txt3)) */
+.harvest-detail {
+  font-size: 11px;
+  color: var(--txt3);
+}
+
+/* Artisan-active section intro text */
+.artisan-intro {
+  font-size: 12px;
+  color: var(--txt2);
+  margin-bottom: 8px;
+}
+
+/* Locked-chain lists below active chains section */
+.locked-list {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--txt3);
+}
+
+.locked-list+.locked-list {
+  margin-top: 4px;
+}
+
+/* Forage section — winter priority tip */
+.forage-winter-tip {
+  margin-bottom: 10px;
+}
+
+/* Plot tile info line below each plot editor row */
+.plot-tile-info {
+  font-size: 10px;
+  color: var(--txt3);
+  margin-top: 3px;
+}
+
+/* Giant block count suffix "(Nt)" */
+.giant-tile-count {
+  font-size: 12px;
+  font-weight: 400;
 }

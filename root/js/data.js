@@ -38,12 +38,11 @@ const SEASONS = ["Spring", "Summer", "Fall", "Winter"];
  * "ir-pn"   — iridium + pressure nozzle; covers 48 tiles (7×7 minus corners)
  */
 const SPRINKLER_CONFIGS = {
-  none:    { label: "No sprinkler",       lost: (w, h, n) => 0 },
-  inner:   { label: "Inner (small plot)", lost: (w, h, n) => n },
-  basic:   { label: "Basic sprinkler",    lost: (w, h, n) => Math.ceil(w * h * n / 5) },
-  quality: { label: "Quality sprinkler",  lost: (w, h, n) => Math.ceil(w * h * n / 9) },
-  iridium: { label: "Iridium sprinkler",  lost: (w, h, n) => Math.ceil(w * h * n / 25) },
-  "ir-pn": { label: "Iridium + Nozzle",  lost: (w, h, n) => Math.ceil(w * h * n / 49) },
+  none: { label: "No sprinkler", lost: (w, h, n) => 0 },
+  basic: { label: "Basic sprinkler", lost: (w, h, n) => Math.ceil(w * h * n / 5) },
+  quality: { label: "Quality sprinkler", tileCoverage: 9, lost: (w, h, n) => Math.ceil(w * h * n / 9) },
+  iridium: { label: "Iridium sprinkler", tileCoverage: 25, lost: (w, h, n) => Math.ceil(w * h * n / 25) },
+  "ir-pn": { label: "Iridium + Nozzle", tileCoverage: 49, lost: (w, h, n) => Math.ceil(w * h * n / 49) },
 };
 
 
@@ -55,10 +54,10 @@ const SPRINKLER_CONFIGS = {
  * E.g. a 12-day crop with Deluxe Speed-Gro → ceil(12 × 0.75) = 9 days.
  */
 const FERTILIZER_CONFIGS = {
-  none:    { label: "No fertilizer",             mult: 1    },
-  speed:   { label: "Speed-Gro (10% faster)",    mult: 0.9  },
-  deluxe:  { label: "Deluxe Speed-Gro (25%)",    mult: 0.75 },
-  hyper:   { label: "Hyper Speed-Gro (33%)",     mult: 0.67 },
+  none: { label: "No fertilizer", mult: 1 },
+  speed: { label: "Speed-Gro (10% faster)", mult: 0.9 },
+  deluxe: { label: "Deluxe Speed-Gro (25%)", mult: 0.75 },
+  hyper: { label: "Hyper Speed-Gro (33%)", mult: 0.67 },
 };
 
 
@@ -345,18 +344,18 @@ const CROPS = [
  */
 const FORAGE = {
   Spring: [
-    { name: "Wild Horseradish", sell: 50,  note: "Common in fields and paths." },
-    { name: "Daffodil",         sell: 30,  note: "Everywhere — good for gifting." },
-    { name: "Leek",             sell: 60,  note: "Forested areas. Gather with Gatherer perk." },
-    { name: "Dandelion",        sell: 40,  note: "Very common. Gifting item." },
+    { name: "Wild Horseradish", sell: 50, note: "Common in fields and paths." },
+    { name: "Daffodil", sell: 30, note: "Everywhere — good for gifting." },
+    { name: "Leek", sell: 60, note: "Forested areas. Gather with Gatherer perk." },
+    { name: "Dandelion", sell: 40, note: "Very common. Gifting item." },
     {
       name: "Spring Onion", sell: 8,
       note: "Cindersap Forest south. Up to 400g with Botanist+Gatherer.",
-      special: "Days 15–18: Salmonberry bushes",
     },
     {
       name: "Salmonberry", sell: 5,
       note: "Bushes days 15–18 ONLY. Good for energy food.",
+      special: "Days 15–18 bushes only",
     },
   ],
   Summer: [
@@ -396,14 +395,14 @@ const FORAGE = {
       note: "Common in fall. Jar → Jelly 210g.", artisan: "Preserves Jar",
     },
     { name: "Hazelnut", sell: 90, note: "Trees and stumps — common." },
-    { name: "Holly",    sell: 80, note: "Bundle item. Sell raw." },
+    { name: "Holly", sell: 80, note: "Bundle item. Sell raw." },
   ],
   Winter: [
     {
       name: "Crystal Fruit", sell: 150,
       note: "Rare — very valuable. Keg → Juice 450g.", artisan: "Keg",
     },
-    { name: "Holly",      sell: 80,  note: "Found in winter as well." },
+    { name: "Holly", sell: 80, note: "Found in winter as well." },
     {
       name: "Snow Yam", sell: 100,
       note: "Dig with hoe. Bundle item. Jar → Pickled 250g.", artisan: "Preserves Jar",
@@ -412,7 +411,7 @@ const FORAGE = {
       name: "Winter Root", sell: 70,
       note: "Dig with hoe. Jar → Pickled 190g.", artisan: "Preserves Jar",
     },
-    { name: "Crocus",        sell: 60,  note: "Common winter forage. Good gifting item." },
+    { name: "Crocus", sell: 60, note: "Common winter forage. Good gifting item." },
     { name: "Nautilus Shell", sell: 120, note: "Beach in winter. Donate to museum too." },
     { name: "Nautilus Fossil", sell: 80, note: "Dig with hoe. Donate to museum first." },
   ],
@@ -468,12 +467,12 @@ const GREENHOUSE_CROPS = [
  *   note  — strategy note
  */
 const FRUIT_TREES = [
-  { name: "Banana",      sell: "150g/day", badge: "bg-amber", note: "Highest value. Island cooking ingredient." },
-  { name: "Pomegranate", sell: "140g/day", badge: "bg-pink",  note: "Year-round greenhouse producer." },
-  { name: "Peach",       sell: "140g/day", badge: "bg-coral", note: "Highest vanilla fruit tree value." },
-  { name: "Mango",       sell: "130g/day", badge: "bg-green", note: "High value — unlocked post-Island." },
-  { name: "Apple",       sell: "100g/day", badge: "bg-gray",  note: "Reliable and cheap to start." },
-  { name: "Cherry",      sell: "80g/day",  badge: "bg-blue",  note: "Good early greenhouse option." },
+  { name: "Banana", sell: "150g/day", badge: "bg-amber", note: "Highest value. Island cooking ingredient." },
+  { name: "Pomegranate", sell: "140g/day", badge: "bg-pink", note: "Year-round greenhouse producer." },
+  { name: "Peach", sell: "140g/day", badge: "bg-coral", note: "Highest vanilla fruit tree value." },
+  { name: "Mango", sell: "130g/day", badge: "bg-green", note: "High value — unlocked post-Island." },
+  { name: "Apple", sell: "100g/day", badge: "bg-gray", note: "Reliable and cheap to start." },
+  { name: "Cherry", sell: "80g/day", badge: "bg-blue", note: "Good early greenhouse option." },
 ];
 
 
